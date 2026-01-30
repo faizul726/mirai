@@ -17,7 +17,6 @@ $output v_color0
 $output v_absorbColor
 $output v_scatterColor
 $output v_worldPos
-$output v_clipPos
 $output v_tangent
 $output v_bitangent
 $output v_normal

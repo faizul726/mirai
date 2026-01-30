@@ -103,7 +103,6 @@ void main() {
     outColor = preExposeLighting(outColor, texture2D(s_PreviousFrameAverageLuminance, vec2_splat(0.5)).r);
 
     gl_FragColor.rgb = outColor;
-
 }
 #endif
 #endif

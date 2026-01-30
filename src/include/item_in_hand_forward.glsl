@@ -35,7 +35,6 @@ void main() {
 
     v_color0 = a_color0;
     v_worldPos = worldPos;
-    v_clipPos = mul(u_viewProj, vec4(worldPos, 1.0));
     v_normal = mul(u_model[0], vec4(a_normal.xyz, 0.0)).xyz;
     v_prevWorldPos = mul(PrevWorld, vec4(a_position, 1.0)).xyz;
 
@@ -83,13 +82,11 @@ SAMPLER2D_HIGHP_AUTOREG(s_GlintTexture);
 #endif
 
 SAMPLER2D_HIGHP_AUTOREG(s_PreviousFrameAverageLuminance);
-SAMPLER2DARRAY_AUTOREG(s_ScatteringBuffer);
 
 #include "./lib/materials.glsl"
 #include "./lib/shadow.glsl"
 #include "./lib/bsdf.glsl"
 #include "./lib/ibl.glsl"
-#include "./lib/froxel_util.glsl"
 #endif
 
 void main() {
@@ -152,16 +149,9 @@ void main() {
 
     bool isCameraInsideWater = CameraIsUnderwater.r != 0.0 && CausticsParameters.a != 0.0;
     bool isNeedSkyReflection = !isCameraInsideWater && (DimensionID.r != 0.0);
-    outColor += indirectSpecular(f0, worldDir, normal, v_scatterColor, v_absorbColor, mers.b, mers.r, TileLightIntensity.rg, !isCameraInsideWater);
+    outColor += indirectSpecular(f0, worldDir, normal, v_scatterColor, v_absorbColor, mers.b, mers.r, TileLightIntensity.rg, isNeedSkyReflection);
 
     if (isCameraInsideWater) outColor *= exp(-WATER_EXTINCTION_COEFFICIENTS * length(v_worldPos));
-
-    if (VolumeScatteringEnabledAndPointLightVolumetricsEnabled.x != 0.0) {
-        vec3 projPos = v_clipPos.xyz / v_clipPos.w;
-        vec3 uvw = ndcToVolume(projPos);
-        vec4 volumetricFog = sampleVolume(s_ScatteringBuffer, uvw);
-        outColor = outColor * volumetricFog.a + volumetricFog.rgb;
-    }
 
     outColor = preExposeLighting(outColor, texture2D(s_PreviousFrameAverageLuminance, vec2_splat(0.5)).r);
 

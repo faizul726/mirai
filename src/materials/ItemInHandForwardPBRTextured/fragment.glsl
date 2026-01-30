@@ -4,7 +4,6 @@ $input v_color0
 $input v_absorbColor
 $input v_scatterColor
 $input v_worldPos
-$input v_clipPos
 $input v_tangent
 $input v_bitangent
 $input v_normal

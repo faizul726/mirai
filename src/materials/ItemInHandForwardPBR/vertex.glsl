@@ -14,7 +14,6 @@ $output v_color0
 $output v_absorbColor
 $output v_scatterColor
 $output v_worldPos
-$output v_clipPos
 $output v_normal
 $output v_prevWorldPos
 

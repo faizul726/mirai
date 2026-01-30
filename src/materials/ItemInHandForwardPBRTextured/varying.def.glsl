@@ -16,7 +16,6 @@ vec3 v_tangent : TANGENT;
 vec3 v_bitangent : BITANGENT;
 vec3 v_normal : NORMAL;
 vec3 v_worldPos : TEXCOORD1;
-vec4 v_clipPos : TEXCOORD3;
 vec3 v_prevWorldPos : TEXCOORD2;
 vec2 v_texcoord0 : TEXCOORD0;
 flat int v_pbrTextureId : TEXCOORD4;
