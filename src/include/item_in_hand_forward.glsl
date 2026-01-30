@@ -73,6 +73,7 @@ uniform highp vec4 MoonDir;
 uniform highp vec4 CameraLightIntensity;
 uniform highp vec4 CameraIsUnderwater;
 uniform highp vec4 CausticsParameters;
+uniform highp vec4 DimensionID;
 
 #ifdef MATERIAL_ITEM_IN_HAND_FORWARD_PBR_TEXTURED
 SAMPLER2D_HIGHP_AUTOREG(s_MatTexture);
@@ -150,6 +151,7 @@ void main() {
     outColor += albedo.rgb * mers.g * EMISSIVE_MATERIAL_INTENSITY;
 
     bool isCameraInsideWater = CameraIsUnderwater.r != 0.0 && CausticsParameters.a != 0.0;
+    bool isNeedSkyReflection = !isCameraInsideWater && (DimensionID.r != 0.0);
     outColor += indirectSpecular(f0, worldDir, normal, v_scatterColor, v_absorbColor, mers.b, mers.r, TileLightIntensity.rg, !isCameraInsideWater);
 
     if (isCameraInsideWater) outColor *= exp(-WATER_EXTINCTION_COEFFICIENTS * length(v_worldPos));

@@ -66,16 +66,14 @@ bool isOccluded(vec2 occlusionUV, float occlusionHeight, float occlusionHeightTh
 }
 
 vec2 calculateOcclusionAndLightingUV(vec2 occlusionUV, float occlusionHeight) {
-#if NO_OCCLUSION__ON
-    return vec2_splat(1.0);
-#else
     vec4 o = texture2D(s_OcclusionTexture, occlusionUV);
     float occlusionLuminance = o.r;
     float occlusionHeightThreshold = o.g + (o.b * 255.0) - (OcclusionHeightOffset.x / 255.0);
-    if (isOccluded(occlusionUV, occlusionHeight, occlusionHeightThreshold)) return vec2_splat(0.0);
     float fade = saturate(occlusionLuminance - ((occlusionHeight - occlusionHeightThreshold) * 25.0) * occlusionLuminance);
-    return vec2(fade, 0.5);
+#if NO_OCCLUSION__OFF
+    if (isOccluded(occlusionUV, occlusionHeight, occlusionHeightThreshold)) return vec2_splat(0.0);
 #endif
+    return vec2(fade, 1.0);
 }
 
 void main() {
@@ -84,7 +82,6 @@ void main() {
 #if FORWARD_PBR_TRANSPARENT_PASS
     vec2 lighting = calculateOcclusionAndLightingUV(v_occlusionUV, v_occlusionHeight);
     albedo.rgb = pow(albedo.rgb, vec3_splat(2.2));
-    albedo.rgb = saturation(albedo.rgb, 0.0);
 
     vec3 blockAmbient = BLOCK_LIGHT_COLOR * uv1x2lig(lighting.r) * BLOCK_LIGHT_INTENSITY;
     vec3 outColor = albedo.rgb * max(blockAmbient, vec3_splat(0.05));

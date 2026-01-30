@@ -83,11 +83,12 @@ void main() {
         vec3 worldPos = projToWorld(projPos);
         vec3 worldDir = normalize(worldPos);
 
-        bool isCameraUnderWater = CameraIsUnderwater.r != 0.0;
-        outColor = indirectSpecular(f0, worldDir, normal, v_scatterColor, v_absorbColor, v_texcoord0, data2.a, metalness, data2.gb, exposure, !isCameraUnderWater);
+        bool isOverworld = DimensionID.r == 0.0;
+        bool isNeedSkyReflection = !(CameraIsUnderwater.r != 0.0) && isOverworld;
+        outColor = indirectSpecular(f0, worldDir, normal, v_scatterColor, v_absorbColor, v_texcoord0, data2.a, metalness, data2.gb, exposure, isNeedSkyReflection);
 
         float worldDist = length(worldPos);
-        float fogBlend = (DimensionID.r == 0.0) ? calculateFogIntensityVanilla(worldDist, FogAndDistanceControl.z, 0.92, 1.0) : calculateFogIntensityFaded(worldDist, FogAndDistanceControl.z, FogAndDistanceControl.x, FogAndDistanceControl.y, RenderChunkFogAlpha.x);
+        float fogBlend = isOverworld ? calculateFogIntensityVanilla(worldDist, FogAndDistanceControl.z, 0.92, 1.0) : calculateFogIntensityFaded(worldDist, FogAndDistanceControl.z, FogAndDistanceControl.x, FogAndDistanceControl.y, RenderChunkFogAlpha.x);
         outColor = outColor * saturate(1.0 - fogBlend);
 
         if (VolumeScatteringEnabledAndPointLightVolumetricsEnabled.x != 0.0) {

@@ -2,9 +2,9 @@
 #include "./lib/atmosphere.glsl"
 
 #if BGFX_SHADER_TYPE_VERTEX
-uniform highp vec4 SunDir;
-uniform highp vec4 MoonDir;
-uniform highp vec4 DimensionID;
+uniform vec4 SunDir;
+uniform vec4 MoonDir;
+uniform vec4 DimensionID;
 
 void main(){
 #if INSTANCING__ON
@@ -41,6 +41,7 @@ uniform highp vec4 TileLightIntensity;
 uniform highp vec4 CameraLightIntensity;
 uniform highp vec4 SunDir;
 uniform highp vec4 MoonDir;
+uniform highp vec4 DimensionID;
 
 SAMPLER2D_HIGHP_AUTOREG(s_MatTexture);
 SAMPLER2D_HIGHP_AUTOREG(s_PreviousFrameAverageLuminance);
@@ -77,7 +78,8 @@ void main() {
     outColor += albedo.rgb * MERSUniforms.g * EMISSIVE_MATERIAL_INTENSITY;
 
     bool isCameraInsideWater = CameraIsUnderwater.r != 0.0 && CausticsParameters.a != 0.0;
-    outColor += indirectSpecular(f0, worldDir, normal, v_scatterColor, v_absorbColor, MERSUniforms.b, MERSUniforms.r, TileLightIntensity.rg, !isCameraInsideWater);
+    bool isNeedSkyReflection = !isCameraInsideWater && (DimensionID.r != 0.0);
+    outColor += indirectSpecular(f0, worldDir, normal, v_scatterColor, v_absorbColor, MERSUniforms.b, MERSUniforms.r, TileLightIntensity.rg, isNeedSkyReflection);
 
     if (isCameraInsideWater) outColor *= exp(-WATER_EXTINCTION_COEFFICIENTS * length(v_worldPos));
 

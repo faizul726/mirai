@@ -21,6 +21,7 @@ SAMPLER2D_HIGHP_AUTOREG(s_BlurPyramidTexture);
 #include "./lib/common.glsl"
 
 void main() {
+    // original vibrant visual bloom, modified to remove black square bug
     vec2 uv = (floor(ViewportScale.zw * ViewportScale.xy) - 0.5) / ViewportScale.zw;
 
 #if BLOOM_BLEND_PASS
