@@ -23,7 +23,7 @@ NORMAL_PROFILE="${PLATFORM}"
 NOCLOUDS_PROFILE="${PLATFORM}_noclouds"
 
 SHADERC_PATH="./shaderc"
-DOWNLOAD_URL="https://github.com/veka0/bgfx-mcbe/releases/download/binaries/shaderc-linux-x64.zip"
+DOWNLOAD_URL="https://github.com/bambosan/bgfx-mcbe/releases/download/binaries/shaderc-win-x64.zip"
 ZIP_FILE="shaderc.zip"
 
 # checking lazurite
