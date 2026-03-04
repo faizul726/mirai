@@ -1,9 +1,12 @@
 #define MATERIAL_ITEM_IN_HAND_FORWARD_PBR_GLINT
 
 $input a_color0
+$input a_texcoord1
 $input a_texcoord8
 $input a_normal
+$input a_texcoord4
 $input a_position
+$input a_tangent
 $input a_texcoord0
 
 #if INSTANCING__ON

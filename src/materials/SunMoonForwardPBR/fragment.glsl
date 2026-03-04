@@ -1,4 +1,7 @@
+$input v_texcoord0
+$input v_absorbColor
+$input v_worldPos
+$input v_clipPos
+
 #include "bgfx_shader.sh"
-void main() {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
-}
+#include "sun_moon_forward.glsl"

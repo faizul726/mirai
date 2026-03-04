@@ -1,10 +1,12 @@
+#define MATERIAL_RENDERCHUNK_PREPASS
+
 $input a_color0
-$input a_tangent
-$input a_normal
-$input a_position
-$input a_texcoord0
 $input a_texcoord1
+$input a_normal
 $input a_texcoord4
+$input a_position
+$input a_tangent
+$input a_texcoord0
 
 #if INSTANCING__ON
 $input i_data1
@@ -22,5 +24,4 @@ $output v_lightmapUV
 $output v_pbrTextureId
 
 #include "bgfx_shader.sh"
-#define MATERIAL_RENDERCHUNK_PREPASS
 #include "renderchunk_prepass.glsl"

@@ -1,0 +1,19 @@
+{
+    "format_version": "1.21.80",
+    "minecraft:water_settings": {
+        "format_version": "1.21.80",
+        "description": {
+            "identifier": "mirai:default_water"
+        },
+        "caustics": {
+            "enabled": true,
+            "frame_length": 0.5,
+            "texture": "textures/rand.png",
+            "scale": 1.0,
+            "power": 1
+        },
+        "waves": {
+            "enabled": false
+        }
+    }
+}

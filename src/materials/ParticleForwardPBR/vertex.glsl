@@ -1,7 +1,7 @@
+$input a_texcoord1
 $input a_color0
 $input a_position
 $input a_texcoord0
-$input a_texcoord1
 
 #if INSTANCING__ON
 $input i_data1

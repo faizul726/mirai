@@ -56,12 +56,17 @@ void main() {
     v_layerUV.zw = calculateLayerUV(a_texcoord0, UVAnimation.y, UVAnimation.w, UVScale.xy);
 #endif
 
-    v_absorbColor = GetLightTransmittance(SunDir.xyz) * SUN_MAX_ILLUMINANCE;
-    v_absorbColor += GetLightTransmittance(MoonDir.xyz) * MOON_MAX_ILLUMINANCE;
-    v_scatterColor = GetAtmosphere(vec3(0.0, 100.0, 0.0), vec3(0.0, 1.0, 0.0), 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
-    v_scatterColor += GetAtmosphere(vec3(0.0, 100.0, 0.0), vec3(0.0, 1.0, 0.0), 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
+    //add smooth transition between night and sunrise, sunset and night
+    float sunFade = smoothstep(0.0, 0.2, SunDir.y);
+    float moonFade = smoothstep(0.0, 0.2, MoonDir.y);
 
-    if (DimensionID.r != 0.0) {
+    v_absorbColor = GetLightTransmittance(SunDir.xyz) * sunFade * PI * M_EXPOSURE_MUL * SUN_MAX_ILLUMINANCE;
+    v_absorbColor += GetLightTransmittance(MoonDir.xyz) * moonFade * PI * M_EXPOSURE_MUL * MOON_MAX_ILLUMINANCE;
+
+    v_scatterColor = GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
+    v_scatterColor += GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
+
+    if (int(DimensionID.r) != 0) {
         v_absorbColor = vec3_splat(0.0);
         v_scatterColor = vec3_splat(1.0);
     }
@@ -123,15 +128,17 @@ uniform highp vec4 MoonDir;
 uniform highp vec4 CameraIsUnderwater;
 uniform highp vec4 CausticsParameters;
 uniform highp vec4 DimensionID;
+uniform highp vec4 WorldOrigin;
+uniform highp vec4 Time;
+uniform highp vec4 FogAndDistanceControl;
 
 SAMPLER2D_HIGHP_AUTOREG(s_PreviousFrameAverageLuminance);
-SAMPLER2DARRAY_AUTOREG(s_ScatteringBuffer);
 
 #include "./lib/materials.glsl"
 #include "./lib/shadow.glsl"
 #include "./lib/bsdf.glsl"
 #include "./lib/ibl.glsl"
-#include "./lib/froxel_util.glsl"
+#include "./lib/volumetrics.glsl"
 #endif
 
 void main() {
@@ -167,11 +174,10 @@ void main() {
 #endif
 
 
-#if (defined(MATERIAL_ACTOR_BANNER_FORWARD_PBR) && FORWARD_PBR_ALPHA_TEST_PASS) || \
-    defined(MATERIAL_ACTOR_FORWARD_PBR) || \
-    defined(MATERIAL_ACTOR_GLINT_FORWARD_PBR) || \
-    (defined(MATERIAL_ACTOR_PATTERN_FORWARD_PBR) && FORWARD_PBR_OPAQUE_PASS) || \
-    defined(MATERIAL_ACTOR_PATTERN_GLINT_FORWARD_PBR)
+#if defined(MATERIAL_ACTOR_FORWARD_PBR) || \
+defined(MATERIAL_ACTOR_GLINT_FORWARD_PBR) || \
+(defined(MATERIAL_ACTOR_PATTERN_FORWARD_PBR) && FORWARD_PBR_OPAQUE_PASS) || \
+defined(MATERIAL_ACTOR_PATTERN_GLINT_FORWARD_PBR)
 
     vec4 albedo = getActorAlbedoNoColorChange(MatColor, s_MatTexture, s_MatTexture1, v_texcoord0);
 
@@ -189,7 +195,7 @@ void main() {
 
     vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
 
-#if defined(MATERIAL_ACTOR_BANNER_FORWARD_PBR) && (FORWARD_PBR_OPAQUE_PASS || FORWARD_PBR_TRANSPARENT_PASS)
+#ifdef MATERIAL_ACTOR_BANNER_FORWARD_PBR
     vec4 albedo = getBannerAlbedo(v_color0, s_MatTexture, v_texcoords.zw, v_texcoords.xy);
     albedo.a *= HudOpacity.r;
 
@@ -218,29 +224,47 @@ void main() {
 
     vec3 f0 = mix(vec3_splat(0.02), albedo.rgb, mers.r);
 
+    //ambient light
     vec3 blockAmbient = BLOCK_LIGHT_COLOR * uv1x2lig(TileLightIntensity.r) * BLOCK_LIGHT_INTENSITY;
-    vec3 skyAmbient = mix(pow(TileLightIntensity.g, 3.0), pow(TileLightIntensity.g, 5.0), CameraLightIntensity.g) * v_scatterColor * SKY_LIGHT_INTENSITY;
+    vec3 skyAmbient = (v_scatterColor + v_absorbColor * 0.01) * mix(pow(TileLightIntensity.g, 3.0), pow(TileLightIntensity.g, 5.0), CameraLightIntensity.g) * SKY_AMBIENT_INTENSITY;
     vec3 outColor = albedo.rgb * (1.0 - mers.r) * max(blockAmbient + skyAmbient, vec3_splat(MIN_AMBIENT_LIGHT));
 
+
+    //direct light
+    vec3 shadowMap = calcShadowMap(v_worldPos, normal).rgr;
+
+    float wDistNorm = length(v_worldPos) / FogAndDistanceControl.z;
+    float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
+
+#ifdef VOLUMETRIC_CLOUDS_ENABLED
+    vec3 position = v_worldPos - WorldOrigin.xyz;
+    CloudSetup cloudSetup = calcCloudSetup(DirectionalLightSourceWorldSpaceDirection.y, position.y);
+    float cloudShadow = calcCloudShadow(position, DirectionalLightSourceWorldSpaceDirection.xyz, 2.0, cloudSetup);
+
+    shadowMap.rg = min(shadowMap.rg, vec2_splat(cloudShadow * CLOUD_SHADOW_CONTRIBUTION + (1.0 - CLOUD_SHADOW_CONTRIBUTION)));
+    shadowMap.b = min(shadowMap.b, cloudShadow); //used for specular
+#endif
+
     vec3 worldDir = normalize(v_worldPos);
-    vec2 shadowMap = calcShadowMap(v_worldPos, normal);
     vec3 bsdf = BSDF(normal, DirectionalLightSourceWorldSpaceDirection.xyz, -worldDir, f0, albedo.rgb, shadowMap, mers.r, mers.b, mers.a);
 
     outColor += bsdf * v_absorbColor;
     outColor += albedo.rgb * mers.g * EMISSIVE_MATERIAL_INTENSITY;
 
-    bool isCameraInsideWater = CameraIsUnderwater.r != 0.0 && CausticsParameters.a != 0.0;
-    bool isNeedSkyReflection = !isCameraInsideWater && (DimensionID.r != 0.0);
-    outColor += indirectSpecular(f0, worldDir, normal, v_scatterColor, v_absorbColor, mers.b, mers.r, TileLightIntensity.rg, isNeedSkyReflection);
+#ifdef VOLUMETRIC_CLOUDS_ENABLED
+    applyCumulusClouds(outColor, v_scatterColor, v_absorbColor, worldDir, wDistNorm, dither, true);
+#endif
 
+    bool isCameraInsideWater = CameraIsUnderwater.r > 0.0 && CausticsParameters.a > 0.0;
+    //underwater extinction
     if (isCameraInsideWater) outColor *= exp(-WATER_EXTINCTION_COEFFICIENTS * length(v_worldPos));
 
-    if (VolumeScatteringEnabledAndPointLightVolumetricsEnabled.x != 0.0) {
-        vec3 projPos = v_clipPos.xyz / v_clipPos.w;
-        vec3 uvw = ndcToVolume(projPos);
-        vec4 volumetricFog = sampleVolume(s_ScatteringBuffer, uvw);
-        outColor = outColor * volumetricFog.a + volumetricFog.rgb;
-    }
+    vec3 projPos = v_clipPos.xyz / v_clipPos.w;
+    applyVolumetricFog(outColor, projPos);
+
+
+    bool isNeedSkyReflection = !isCameraInsideWater && (int(DimensionID.r) != 0);
+    outColor += indirectSpecular(f0, worldDir, normal, mers.b, mers.r, TileLightIntensity.rg, isNeedSkyReflection);
 
     outColor = preExposeLighting(outColor, texture2D(s_PreviousFrameAverageLuminance, vec2_splat(0.5)).r);
 

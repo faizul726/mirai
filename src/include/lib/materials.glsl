@@ -1,7 +1,7 @@
 #ifndef MATERIALS_INCLUDE
 #define MATERIALS_INCLUDE
 
-// taken from old vanilla deferred material
+// taken from old vanilla deferred material, and it still works
 
 CONST(float) kHeightMapPixelEdgeWidth = 0.08333333333333333;
 CONST(float) kHeightMapDepth = 4.0;
@@ -9,7 +9,7 @@ CONST(float) kRecipHeightMapDepth = 0.25;
 CONST(float) kNudgePixelCentreDistEpsilon = 0.0625;
 CONST(float) kNudgeUvEpsilon = 3.814697265625e-06;
 
-CONST(int) kInvalidPBRTextureHandle = 0xffff;
+CONST(int) kInvalidPBRTextureHandle = 0xFFFF;
 CONST(int) kPBRTextureDataFlagHasMaterialTexture = 1;
 CONST(int) kPBRTextureDataFlagHasSubsurfaceChannel = 2;
 CONST(int) kPBRTextureDataFlagHasNormalTexture = 4;
@@ -81,9 +81,10 @@ vec3 calculateTangentNormalFromHeightmap(highp sampler2D heightmapTexture, vec2 
 }
 
 #if defined(MATERIAL_ITEM_IN_HAND_FORWARD_PBR_TEXTURED) || \
+defined(MATERIAL_ITEM_IN_HAND_PREPASS_TEXTURED) || \
 defined(MATERIAL_RENDERCHUNK_FORWARD_PBR) || \
 defined(MATERIAL_RENDERCHUNK_PREPASS) || \
-defined(MATERIAL_MESH_FALLBACK_MOVING_BLOCK_FORWARD_PBR)
+defined(MATERIAL_TEXTURE_SHIFT_RENDERCHUNK_PREPASS)
 
 struct PBRTextureData {
     highp float colourToMaterialUvScale0;
@@ -152,13 +153,18 @@ void getTexturePBRMaterials(
 
 #endif
 
-#if (defined(MATERIAL_ACTOR_BANNER_FORWARD_PBR) && FORWARD_PBR_ALPHA_TEST_PASS) || \
-defined(MATERIAL_ACTOR_FORWARD_PBR) || \
+#if defined(MATERIAL_ACTOR_FORWARD_PBR) || \
 defined(MATERIAL_ACTOR_GLINT_FORWARD_PBR) || \
 defined(MATERIAL_ACTOR_MULTI_TEXTURE_FORWARD_PBR) || \
 defined(MATERIAL_ACTOR_PATTERN_FORWARD_PBR) || \
 defined(MATERIAL_ACTOR_PATTERN_GLINT_FORWARD_PBR) || \
-defined(MATERIAL_ACTOR_TINT_FORWARD_PBR)
+defined(MATERIAL_ACTOR_TINT_FORWARD_PBR) || \
+defined(MATERIAL_ACTOR_PREPASS) || \
+defined(MATERIAL_ACTOR_GLINT_PREPASS) || \
+defined(MATERIAL_ACTOR_MULTI_TEXTURE_PREPASS) || \
+defined(MATERIAL_ACTOR_PATTERN_PREPASS) || \
+defined(MATERIAL_ACTOR_PATTERN_GLINT_PREPASS) || \
+defined(MATERIAL_ACTOR_TINT_PREPASS)
 
 uniform highp vec4 PBRTextureFlags;
 uniform highp vec4 MetalnessUniform;
@@ -200,7 +206,7 @@ void getTexturePBRMaterials(
 
 #endif
 
-#if defined(MATERIAL_ACTOR_BANNER_FORWARD_PBR) && (FORWARD_PBR_OPAQUE_PASS || FORWARD_PBR_TRANSPARENT_PASS)
+#if defined(MATERIAL_ACTOR_BANNER_FORWARD_PBR) || defined(MATERIAL_ACTOR_BANNER_PREPASS)
 
 uniform highp vec4 BannerBasePBRTextureData[4];
 

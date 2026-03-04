@@ -1,43 +1,62 @@
 #ifndef IBL_INCLUDE
 #define IBL_INCLUDE
 
+// this is basically vanilla vibrant visual indirect specular
+// with some changes to make it look oke with mirai needs
+
+uniform highp vec4 ConvolutionType;
 uniform highp vec4 IBLParameters;
-uniform highp vec4 Time;
+uniform highp vec4 IBLSkyFadeParameters;
+uniform highp vec4 LastSpecularIBLIdx;
+
 SAMPLER2D_HIGHP_AUTOREG(s_BrdfLUT);
+SAMPLERCUBEARRAY_AUTOREG(s_SpecularIBLRecords);
+
+float getIBLMipLevel(float a) {
+    float x = 1.0 - a;
+    x = pow(x, 4.0);
+    if (int(ConvolutionType.x) == 1) x = pow(x, 2.0);
+    return (1.0 - x) * (IBLParameters.y - 1.0);
+}
+
+vec3 getProbeLighting(float a, vec3 rv) {
+    float iblMipLevel = getIBLMipLevel(a);
+    int curr = int(LastSpecularIBLIdx.x);
+    int prev = (curr + 2) % 3;
+
+    vec3 preFilteredColorCurrent = textureCubeArrayLod(s_SpecularIBLRecords, vec4(rv, curr), iblMipLevel).rgb;
+    vec3 preFilteredColorPrevious = textureCubeArrayLod(s_SpecularIBLRecords, vec4(rv, prev), iblMipLevel).rgb;
+
+    vec3 preFilteredColor = mix(preFilteredColorPrevious, preFilteredColorCurrent, IBLParameters.w);
+    return preFilteredColor;
+}
 
 #if DO_INDIRECT_SPECULAR_SHADING_DUAL_TARGET_PASS || DO_INDIRECT_SPECULAR_SHADING_SINGLE_TARGET_PASS
 
 uniform highp vec4 SSRParameters;
 SAMPLER2D_HIGHP_AUTOREG(s_SSRTexture);
 
-vec3 indirectSpecular(vec3 f0, vec3 worldDir, vec3 normal, vec3 scatterColor, vec3 absorbColor, vec2 ssrUV, float roughness, float metalness, vec2 lightmap, float exposure, bool isNeedSkyReflection) {
+vec3 indirectSpecular(vec3 f0, vec3 worldDir, vec3 normal, vec2 ssrUV, float roughness, float metalness, vec2 lightmap, float exposure, bool isNeedSkyReflection) {
     vec3 blockAmbient = BLOCK_LIGHT_COLOR * uv1x2lig(lightmap.r) * BLOCK_LIGHT_INTENSITY;
     vec3 ambientColor = mix(vec3_splat(MIN_AMBIENT_LIGHT), blockAmbient, luminance(blockAmbient)) * metalness;
     vec3 incomingLight = ambientColor;
 
-    if (IBLParameters.r != 0.0) {
+    if (IBLParameters.r > 0.0) {
         vec3 reflectedDir = reflect(worldDir, normal);
-        vec3 skyReflection = GetAtmosphere(vec3(0.0, 100.0, 0.0), reflectedDir, 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
-        skyReflection += GetAtmosphere(vec3(0.0, 100.0, 0.0), reflectedDir, 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
-
-        skyReflection = calcClouds(reflectedDir, SunDir.xyz, MoonDir.xyz, scatterColor, absorbColor, skyReflection, Time.x);
+        float reflIntensity = 1.0 - sqrt(roughness);
+        vec3 skyProbe = getProbeLighting(roughness, reflectedDir);
 
         if (isNeedSkyReflection) {
-            float refIntensity = 1.0 - sqrt(roughness);
-            incomingLight = mix(incomingLight, skyReflection * pow(lightmap.g, 3.0) * refIntensity, refIntensity);
+            incomingLight = mix(incomingLight, skyProbe * pow(lightmap.g, 3.0) * reflIntensity, reflIntensity);
         }
 
         float iblLuminance = luminance(incomingLight);
         float ambientLuminance = luminance(ambientColor);
-        if (iblLuminance < ambientLuminance) {
-            incomingLight = ambientColor;
-        }
+        if (iblLuminance < ambientLuminance) incomingLight = ambientColor;
 
-        if (SSRParameters.r != 0.0) {
-            vec4 ssr = texture2D(s_SSRTexture, ssrUV);
-            ssr.rgb = unExposeLighting(ssr.rgb, exposure);
-            incomingLight = mix(incomingLight, ssr.rgb, ssr.a * SSRParameters.g);
-        }
+        vec4 ssr = texture2D(s_SSRTexture, ssrUV);
+        ssr.rgb = unExposeLighting(ssr.rgb, exposure);
+        if (SSRParameters.r > 0.0 && isNeedSkyReflection) incomingLight = mix(incomingLight, ssr.rgb, ssr.a * SSRParameters.g);
     }
 
     float cost = saturate(dot(-worldDir, normal));
@@ -49,22 +68,23 @@ vec3 indirectSpecular(vec3 f0, vec3 worldDir, vec3 normal, vec3 scatterColor, ve
 
 #else
 
-vec3 indirectSpecular(vec3 f0, vec3 worldDir, vec3 normal, vec3 scatterColor, vec3 absorbColor, float roughness, float metalness, vec2 lightmap, bool isNeedSkyReflection) {
+vec3 indirectSpecular(vec3 f0, vec3 worldDir, vec3 normal, float roughness, float metalness, vec2 lightmap, bool isNeedSkyReflection) {
     vec3 blockAmbient = BLOCK_LIGHT_COLOR * uv1x2lig(lightmap.r) * BLOCK_LIGHT_INTENSITY;
     vec3 ambientColor = mix(vec3_splat(MIN_AMBIENT_LIGHT), blockAmbient, luminance(blockAmbient)) * metalness;
     vec3 incomingLight = ambientColor;
 
-    if (IBLParameters.r != 0.0) {
+    if (IBLParameters.r > 0.0) {
         vec3 reflectedDir = reflect(worldDir, normal);
-        vec3 skyReflection = GetAtmosphere(vec3(0.0, 100.0, 0.0), reflectedDir, 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
-        skyReflection += GetAtmosphere(vec3(0.0, 100.0, 0.0), reflectedDir, 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
-
-        skyReflection = calcClouds(reflectedDir, SunDir.xyz, MoonDir.xyz, scatterColor, absorbColor, skyReflection, Time.x);
+        float reflIntensity = 1.0 - sqrt(roughness);
+        vec3 skyProbe = getProbeLighting(roughness, reflectedDir);
 
         if (isNeedSkyReflection) {
-            float refIntensity = 1.0 - sqrt(roughness);
-            incomingLight = mix(incomingLight, skyReflection * pow(lightmap.g, 3.0) * refIntensity, refIntensity);
+            incomingLight = mix(incomingLight, skyProbe * pow(lightmap.g, 3.0) * reflIntensity, reflIntensity);
         }
+
+        float iblLuminance = luminance(incomingLight);
+        float ambientLuminance = luminance(ambientColor);
+        if (iblLuminance < ambientLuminance) incomingLight = ambientColor;
     }
 
     float cost = saturate(dot(-worldDir, normal));

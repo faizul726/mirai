@@ -1,10 +1,10 @@
 #define MATERIAL_ACTOR_TINT_FORWARD_PBR
 
-$input a_color0
-$input a_tangent
-$input a_normal
 $input a_indices
+$input a_color0
+$input a_normal
 $input a_position
+$input a_tangent
 $input a_texcoord0
 
 #if INSTANCING__ON

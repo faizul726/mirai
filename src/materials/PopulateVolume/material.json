@@ -1,5 +1,6 @@
 {
     "uniform_overrides": {
-        "DimensionID": "BUILTIN_MinecraftDimensionID"
+        "DimensionID": "BUILTIN_MinecraftDimensionID",
+        "TimeOfDay": "BUILTIN_MinecraftTimeOfDay"
     }
 }

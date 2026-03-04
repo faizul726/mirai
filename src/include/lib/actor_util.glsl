@@ -1,8 +1,6 @@
 #ifndef ACTOR_UTIL_INCLUDE
 #define ACTOR_UTIL_INCLUDE
 
-// still have some bugs
-
 vec2 applyUvAnimation(vec2 uv, vec4 uvAnimation) {
     uv = uvAnimation.xy + (uv * uvAnimation.zw);
     return uv;
@@ -26,7 +24,10 @@ vec3 applyMultiColorChange(vec3 albedo, vec3 changeColor, vec3 multiplicativeTin
     return albedo;
 }
 
-#if defined(MATERIAL_ACTOR_FORWARD_PBR) || defined(MATERIAL_ACTOR_PATTERN_FORWARD_PBR)
+#if defined(MATERIAL_ACTOR_FORWARD_PBR) || \
+defined(MATERIAL_ACTOR_PREPASS) || \
+defined(MATERIAL_ACTOR_PATTERN_FORWARD_PBR) || \
+defined(MATERIAL_ACTOR_PATTERN_PREPASS)
 
 vec4 applyChangeColor(vec4 albedo, vec4 changeColor, vec3 multiplicativeTintColor, float shouldChangeAlpha) {
 #if CHANGE_COLOR__MULTI

@@ -47,10 +47,8 @@
 // #define DRAW_PLANET                // Draw planet ground sphere.
 #define PREVENT_CAMERA_GROUND_CLIP // Force camera to stay above horizon. Useful for certain games.
 #define LIGHT_COLOR_IS_RADIANCE    // Comment out if light color is not in radiometric units.
-#define AERIAL_SCALE               3.0 // Higher value = more aerial perspective. A value of 1 is tuned to match reference implementation.
-#define NIGHT_LIGHT                2e-3 // Optional, cheap (free) non-physical night lighting. Makes twilight a bit purple which can look nice.
-#define SUN_DISC_SIZE              8.0
-#define MOON_DISC_SIZE             12.0
+#define AERIAL_SCALE               1.0 // Higher value = more aerial perspective. A value of 1 is tuned to match reference implementation.
+//#define NIGHT_LIGHT                2e-3 // Optional, cheap (free) non-physical night lighting. Makes twilight a bit purple which can look nice.
 
 // Atmosphere parameters (physical)
 #define ATMOSPHERE_HEIGHT  100000.0
@@ -96,28 +94,8 @@ vec2 SphereIntersection(vec3 rayStart, vec3 rayDir, vec3 sphereCenter, float sph
     }
 }
 
-vec2 PlanetIntersection(vec3 rayStart, vec3 rayDir) {
-    return SphereIntersection(rayStart, rayDir, PLANET_CENTER, PLANET_RADIUS);
-}
-
-vec2 AtmosphereIntersection(vec3 rayStart, vec3 rayDir) {
-    return SphereIntersection(rayStart, rayDir, PLANET_CENTER, PLANET_RADIUS + ATMOSPHERE_HEIGHT);
-}
-
-float PhaseR(float costh) {
-    return (1.0+sq(costh))*0.06;
-}
-
-float PhaseM(float costh, float g) {
-    g = min(g, 0.9381);
-    float k = 1.55*g-0.55*sq(g)*g;
-    float a = 1.0-sq(k);
-    float b = 12.57*sq(1.0-k*costh);
-    return a/b;
-}
-
 vec3 GetLightTransmittance(vec3 lightDir, float multiplier, float ozoneMultiplier) {
-    float lightExtinctionAmount = exp(-(saturate(lightDir.y + 0.05) * 40.0)) + exp(-(saturate(lightDir.y + 0.5) * 5.0)) * 0.4 + sq(saturate(1.0-lightDir.y)) * 0.02;
+    float lightExtinctionAmount = exp(-(saturate(lightDir.y + 0.05) * 40.0)) + exp(-(saturate(lightDir.y + 0.5) * 5.0)) * 0.4 + sq(saturate(1.0-lightDir.y)) * 0.0;
     return exp(-(C_RAYLEIGH + C_MIE + C_OZONE * ozoneMultiplier) * lightExtinctionAmount * ATMOSPHERE_DENSITY * multiplier * M_LIGHT_TRANSMITTANCE);
 }
 
@@ -127,13 +105,14 @@ vec3 GetLightTransmittance(vec3 lightDir) {
 
 // Main atmosphere function
 vec3 GetAtmosphere(
-    vec3 rayStart,      // Camera position
-    vec3 rayDir,        // View direction
-    float rayLength,     // View distance
-    vec3 lightDir,      // Light (sun) direction
-    vec3 lightColor,    // Light (sun) color. Usually white
-    out vec4 transmittance, // Atmospheric transmittance in xyz, planet intersection flag in w
-    float occlusion      // (Optional) Scattering occlusion (god rays)
+    vec3 rayStart,
+    vec3 rayDir,
+    float rayLength,
+    float aerial,
+    vec3 lightDir,
+    vec3 lightColor,
+    out vec4 transmittance,
+    float occlusion
 ) {
 #ifdef PREVENT_CAMERA_GROUND_CLIP
     rayStart.y = max(rayStart.y, 1.0);
@@ -141,8 +120,8 @@ vec3 GetAtmosphere(
 
     // Planet and atmosphere intersection to get optical depth
     // TODO: Could simplify to circle intersection test if flat horizon is acceptable
-    vec2 t1 = PlanetIntersection(rayStart, rayDir);
-    vec2 t2 = AtmosphereIntersection(rayStart, rayDir);
+    vec2 t1 = SphereIntersection(rayStart, rayDir, PLANET_CENTER, PLANET_RADIUS);
+    vec2 t2 = SphereIntersection(rayStart, rayDir, PLANET_CENTER, PLANET_RADIUS + ATMOSPHERE_HEIGHT);
 
     // Note: This only works if camera XZ is at 0. Otherwise, swap for the line below.
     float altitude = rayStart.y;
@@ -165,7 +144,7 @@ vec3 GetAtmosphere(
 
         // Optical depth modulators
         opticalDepth = min(rayLength, opticalDepth);
-        opticalDepth = min(opticalDepth * M_AERIAL * AERIAL_SCALE, t2.y);
+        opticalDepth = min(opticalDepth * aerial * M_AERIAL * AERIAL_SCALE, t2.y);
 
         // Altitude-based density modulators
         float hbias = 1.0-1.0/(2.0+sq(t2.y)*M_DENSITY_HEIGHT_MOD);
@@ -224,20 +203,18 @@ vec3 GetAtmosphere(
 }
 
 // Overloaded functions
-vec3 GetAtmosphere(vec3 rayStart, vec3 rayDir, float rayLength, vec3 lightDir, vec3 lightColor, out vec4 transmittance) {
-    return GetAtmosphere(rayStart, rayDir, rayLength, lightDir, lightColor, transmittance, 1.0);
+vec3 GetAtmosphere(vec3 rayDir, float rayLength, float aerial, vec3 lightDir, vec3 lightColor, out vec4 transmittance) {
+    return GetAtmosphere(vec3(0.0, 100.0, 0.0), rayDir, rayLength, aerial, lightDir, lightColor, transmittance, 1.0);
 }
 
-vec3 GetAtmosphere(vec3 rayStart, vec3 rayDir, float rayLength, vec3 lightDir, vec3 lightColor) {
+vec3 GetAtmosphere(vec3 rayDir, float rayLength, float aerial, vec3 lightDir, vec3 lightColor) {
     vec4 transmittance;
-    return GetAtmosphere(rayStart, rayDir, rayLength, lightDir, lightColor, transmittance, 1.0);
+    return GetAtmosphere(vec3(0.0, 100.0, 0.0), rayDir, rayLength, aerial, lightDir, lightColor, transmittance, 1.0);
 }
 
-float GetDisc(vec3 rayDir, vec3 lightDir, float size) {
-    float A = cos(0.00436 * size);
-    float costh = dot(rayDir, lightDir);
-    float disc = sqrt(smoothstep(A, 1.0, costh));
-    return disc;
+vec3 GetAtmosphere(vec3 rayDir, float rayLength, vec3 lightDir, vec3 lightColor) {
+    vec4 transmittance;
+    return GetAtmosphere(vec3(0.0, 100.0, 0.0), rayDir, rayLength, 1.0, lightDir, lightColor, transmittance, 1.0);
 }
 
 #endif

@@ -1,12 +1,12 @@
 #define MATERIAL_RENDERCHUNK_FORWARD_PBR
 
 $input a_color0
-$input a_tangent
-$input a_normal
-$input a_position
-$input a_texcoord0
 $input a_texcoord1
+$input a_normal
 $input a_texcoord4
+$input a_position
+$input a_tangent
+$input a_texcoord0
 
 #if INSTANCING__ON
 $input i_data1
@@ -16,6 +16,7 @@ $input i_data3
 
 $output v_worldPos
 $output v_clipPos
+$output v_masking
 $output v_tangent
 $output v_bitangent
 $output v_normal

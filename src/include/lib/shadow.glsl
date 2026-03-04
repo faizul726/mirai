@@ -2,6 +2,7 @@
 #define SHADOW_INCLUDE
 
 // deobfuscated from vanilla material
+// the filtering is fixed PCF 2x2
 
 uniform highp mat4 CascadesShadowInvProj[8];
 uniform highp mat4 CascadesShadowProj[8];
@@ -69,6 +70,7 @@ float calcFPShadow(vec3 worldPos, float nDotSd) {
     return result * 0.25;
 }
 
+// get total 8 cascades, 4 day, 4 night
 int getCascade(vec3 worldPos, out vec3 projPos, out mat4 invProj) {
     int numShadow = 0;
     int numCascade = int(dot(clamp(CascadesPerSet, 0.0, 1.0), vec4_splat(1.0)));

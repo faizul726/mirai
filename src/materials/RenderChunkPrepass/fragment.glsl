@@ -1,3 +1,5 @@
+#define MATERIAL_RENDERCHUNK_PREPASS
+
 $input v_worldPos
 $input v_tangent
 $input v_bitangent
@@ -8,5 +10,7 @@ $input v_lightmapUV
 $input v_pbrTextureId
 
 #include "bgfx_compute.sh"
-#define MATERIAL_RENDERCHUNK_PREPASS
+#if BGFX_SHADER_LANGUAGE_GLSL
+precision highp int;
+#endif
 #include "renderchunk_prepass.glsl"

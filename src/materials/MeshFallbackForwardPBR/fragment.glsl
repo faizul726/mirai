@@ -1,5 +1,3 @@
-#define MATERIAL_MESH_FALLBACK_FORWARD_PBR
-
 $input v_color0
 $input v_absorbColor
 $input v_scatterColor

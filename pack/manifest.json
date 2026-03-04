@@ -2,17 +2,35 @@
   "format_version": 2,
   "header": {
     "name": "Mirai",
-    "description": "Make Minecraft visual looks realistic-vibrant\nBy: bambosan",
-    "uuid": "4afa4dc4-53ea-4d08-9577-a6607237aa9d",
-    "version": [1, 1, 1],
-    "min_engine_version": [1, 21, 100]
+    "description": "Make Minecraft visual looks realistic\nBy: bambosan",
+    "uuid": "2f3f25a4-f5a1-441c-921e-1d8a16b67a39",
+    "version": [2, 0, 0],
+    "min_engine_version": [1, 26, 0]
   },
   "modules": [
     {
-      "description": "Make Minecraft visual looks realistic-vibrant\nBy: bambosan",
+      "description": "Make Minecraft visual looks realistic\nBy: bambosan",
       "type": "resources",
-      "uuid": "3a4665bc-77ba-481e-a452-5508af008596",
-      "version": [1, 1, 1]
+      "uuid": "0c2ba8a7-c954-4460-90fa-8659ac46dee8",
+      "version": [2, 0, 0]
+    }
+  ],
+  "subpacks": [
+    {
+      "folder_name": "vc",
+      "name": "Volumetric Clouds Enabled",
+      "memory_tier": 2
+    },
+    {
+      "folder_name": "novc",
+      "name": "Volumetric Clouds §7Disabled",
+      "memory_tier": 2
+    }
+  ],
+  "settings": [
+    {
+      "type": "label",
+      "text": "§e§lRestart Minecraft after activating the pack or changing the settings!"
     }
   ],
   "capabilities": ["pbr"]

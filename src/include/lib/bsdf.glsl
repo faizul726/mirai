@@ -24,7 +24,7 @@ float wrappedDiffuse(vec3 n, vec3 l, float w) {
     return max((dot(n, l) + w) / ((1.0 + w) * (1.0 + w)), 0.0);
 }
 
-vec3 BSDF(vec3 n, vec3 l, vec3 v, vec3 f0, vec3 albedo, vec2 shadow, float metalness, float roughness, float subsurface) {
+vec3 BSDF(vec3 n, vec3 l, vec3 v, vec3 f0, vec3 albedo, vec3 shadow, float metalness, float roughness, float subsurface) {
     vec3 h = normalize(l + v);
     
     float NoV = saturate(dot(n, v));
@@ -36,7 +36,7 @@ vec3 BSDF(vec3 n, vec3 l, vec3 v, vec3 f0, vec3 albedo, vec2 shadow, float metal
     float D = D_GGX_TrowbridgeReitz(NoH, a);
     float V = V_SmithGGXCorrelated(NoV, NoL, a);
     vec3 F = F_Schlick(LoH, f0);
-    vec3 specular = (D * V) * F * NoL;
+    vec3 specular = (D * V) * F * NoL * (1.0 - a); //I don't like shiny rough surfaces
 
     albedo = (1.0 - metalness) * albedo;
     
@@ -44,7 +44,7 @@ vec3 BSDF(vec3 n, vec3 l, vec3 v, vec3 f0, vec3 albedo, vec2 shadow, float metal
     vec3 diffuse = mix(NoL, wrappedDiffuse(n, l, 0.5), subsurface) * noSpec * albedo / PI;
     vec3 transmittedDiffuse = subsurface * wrappedDiffuse(-n, l, 0.5) * noSpec * albedo / PI;
 
-    return diffuse * shadow.r + transmittedDiffuse * shadow.g + specular * shadow.r;
+    return diffuse * shadow.r + transmittedDiffuse * shadow.g + specular * shadow.b;
 }
 
 vec3 BRDFSpecular(vec3 n, vec3 l, vec3 v, vec3 f0, float shadow, float roughness) {

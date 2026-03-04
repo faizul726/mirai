@@ -1,0 +1,10 @@
+{
+ "parent": {
+    "file": "reflection_configuration.android.low.json"
+  },
+  "overrides": {
+    "ibl": {
+      "num_samples": 32
+    }
+  }
+}

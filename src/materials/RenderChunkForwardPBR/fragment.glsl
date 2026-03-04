@@ -2,6 +2,7 @@
 
 $input v_worldPos
 $input v_clipPos
+$input v_masking
 $input v_tangent
 $input v_bitangent
 $input v_normal
