@@ -17,8 +17,6 @@ void main() {
     vec3 worldPos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
 #endif
 
-    gl_Position = jitterVertexPosition(worldPos);
-
 #if !DEPTH_ONLY_PASS && !DEPTH_ONLY_OPAQUE_PASS
 #ifdef MATERIAL_ITEM_IN_HAND_PREPASS_TEXTURED
     v_texcoord0 = a_texcoord0;
@@ -36,7 +34,9 @@ void main() {
     v_layerUV.xy = calculateLayerUV(a_texcoord0, UVAnimation.x, UVAnimation.z, UVScale.xy);
     v_layerUV.zw = calculateLayerUV(a_texcoord0, UVAnimation.y, UVAnimation.w, UVScale.xy);
 #endif
-#endif
+#endif //!DEPTH_ONLY_PASS && !DEPTH_ONLY_OPAQUE_PASS
+
+    gl_Position = jitterVertexPosition(worldPos);
 }
 #endif //BGFX_SHADER_TYPE_VERTEX
 
@@ -69,10 +69,6 @@ SAMPLER2D_HIGHP_AUTOREG(s_GlintTexture);
 #endif
 
 #include "./lib/materials.glsl"
-
-layout(location = 0) out uvec4 fragData0;
-layout(location = 1) out vec4 fragData1;
-layout(location = 2) out vec4 fragData2;
 
 void main() {
 #ifdef MATERIAL_ITEM_IN_HAND_PREPASS_TEXTURED
@@ -113,10 +109,10 @@ void main() {
 
     albedo.rgb *= 0.5;
 
-    fragData0 = uvec4(pack2x8(mers.bg), pack2x8(TileLightIntensity.rg), pack2x8(vec2(1.0, 0.0)), 0);
-    fragData1 = vec4(albedo.rgb, packMetalnessSubsurface(mers.r, mers.a));
-    fragData2.xy = ndirToOctSnorm(normal);
-    fragData2.zw = calculateMotionVector(v_worldPos, v_prevWorldPos - u_prevWorldPosOffset.xyz);
+    gl_FragData[0] = uvec4(pack2x8(mers.bg), pack2x8(TileLightIntensity.rg), pack2x8(vec2(1.0, 0.0)), 0u);
+    gl_FragData[1] = vec4(albedo.rgb, packMetalnessSubsurface(mers.r, mers.a));
+    gl_FragData[2].xy = ndirToOctSnorm(normal);
+    gl_FragData[2].zw = calculateMotionVector(v_worldPos, v_prevWorldPos - u_prevWorldPosOffset.xyz);
 }
 #endif
 

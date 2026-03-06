@@ -12,9 +12,10 @@ void main(){
 #else
     vec3 worldPos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
 #endif
-    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
 
-    v_clipPos = gl_Position;
+    vec4 clipPos = mul(u_viewProj, vec4(worldPos, 1.0));
+
+    v_clipPos = clipPos;
     v_color0 = a_color0;
     v_worldPos = worldPos;
     v_texcoord0 = a_texcoord0;
@@ -33,8 +34,12 @@ void main(){
         v_absorbColor = vec3_splat(0.0);
         v_scatterColor = vec3_splat(1.0);
     }
+
+    gl_Position = clipPos;
 }
-#endif
+
+#endif //BGFX_SHADER_TYPE_VERTEX
+
 
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 CameraIsUnderwater;
@@ -121,4 +126,5 @@ void main() {
     gl_FragData[1] = vec4_splat(0.0);
     gl_FragData[2] = vec4_splat(0.0);
 }
-#endif
+
+#endif //BGFX_SHADER_TYPE_FRAGMENT

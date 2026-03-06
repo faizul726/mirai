@@ -108,15 +108,12 @@ void main() {
     vec3 viewPos = mul(u_view, vec4(worldPos, 1.0)).xyz;
     float viewDist = length(viewPos);
 
-    //main shadow
     float shadowMap = calcMainShadow(worldPos);
 
-    //first person shadow
     float fpShadow = calcFPShadow(worldPos);
     shadowMap = min(shadowMap, fpShadow);
 
 #ifdef VOLUMETRIC_CLOUDS_ENABLED
-    //cloud shadpw
     vec3 position = worldPos - WorldOrigin.xyz;
     CloudSetup cloudSetup = calcCloudSetup(DirectionalLightSourceWorldSpaceDirection.y, position.y);
     float cloudShadow = calcCloudShadow(position, DirectionalLightSourceWorldSpaceDirection.xyz, 15.0, cloudSetup);

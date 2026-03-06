@@ -21,8 +21,6 @@ void main() {
     vec3 worldPos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
 #endif
 
-    gl_Position = jitterVertexPosition(worldPos);
-
 #if !DEPTH_ONLY_PASS && !DEPTH_ONLY_OPAQUE_PASS
 #ifdef MATERIAL_ITEM_IN_HAND_FORWARD_PBR_TEXTURED
     v_texcoord0 = a_texcoord0;
@@ -57,7 +55,9 @@ void main() {
         v_absorbColor = vec3_splat(0.0);
         v_scatterColor = vec3_splat(1.0);
     }
-#endif
+#endif //!DEPTH_ONLY_PASS && !DEPTH_ONLY_OPAQUE_PASS
+
+    gl_Position = jitterVertexPosition(worldPos);
 }
 #endif
 
@@ -185,4 +185,4 @@ void main() {
     gl_FragData[1] = vec4(0.0, 0.0, calculateMotionVector(v_worldPos, v_prevWorldPos));
 #endif
 }
-#endif
+#endif //BGFX_SHADER_TYPE_FRAGMENT

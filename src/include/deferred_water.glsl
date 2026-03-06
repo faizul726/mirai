@@ -13,10 +13,8 @@ uniform vec4 MoonDir;
 uniform vec4 DimensionID;
 
 void main() {
-    gl_Position = vec4(a_position.xy * 2.0 - 1.0, a_position.z, 1.0);
-
     v_texcoord0 = a_texcoord0;
-    v_projPos = gl_Position.xy;
+    v_projPos = a_position.xy * 2.0 - 1.0;
 
     //add smooth transition between night and sunrise, sunset and night
     float sunFade = smoothstep(0.0, 0.2, SunDir.y);
@@ -32,9 +30,12 @@ void main() {
         v_absorbColor = vec3_splat(0.0);
         v_scatterColor = vec3_splat(1.0);
     }
+
+    gl_Position = vec4(a_position.xy * 2.0 - 1.0, a_position.z, 1.0);
 }
 #endif
 #endif
+
 
 #if BGFX_SHADER_TYPE_FRAGMENT
 #if FALLBACK_PASS
@@ -103,7 +104,6 @@ void main() {
             outColor = vec3_splat(0.0);
             gl_FragColor.a = smoothstep(1.0, 0.0, dot(normal, refract(worldDir, -normal, 1.333)));
         }
-
         applyCumulusClouds(outColor, v_scatterColor, v_absorbColor, worldDir, wDistNorm, dither, true);
         applyVolumetricFog(outColor, projPos);
     } else {
@@ -115,5 +115,7 @@ void main() {
 
     gl_FragColor.rgb = outColor;
 }
+
 #endif
-#endif
+
+#endif //BGFX_SHADER_TYPE_FRAGMENT

@@ -9,12 +9,6 @@ void main() {
     vec3 worldPos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
 #endif
 
-#if GEOMETRY_PREPASS_PASS || GEOMETRY_PREPASS_ALPHA_TEST_PASS
-    gl_Position = jitterVertexPosition(worldPos);
-#else
-    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
-#endif
-
     v_texcoord0 = a_texcoord0;
     v_textureShift = a_texcoord2;
 
@@ -29,8 +23,15 @@ void main() {
     v_worldPos = worldPos;
     v_color0 = a_color0;
 #endif
+
+#if GEOMETRY_PREPASS_PASS || GEOMETRY_PREPASS_ALPHA_TEST_PASS
+    gl_Position = jitterVertexPosition(worldPos);
+#else
+    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
+#endif
 }
 #endif
+
 
 #if BGFX_SHADER_TYPE_FRAGMENT
 struct TextureShiftBuffer {
@@ -66,10 +67,6 @@ void main() {
 
 #include "./lib/materials.glsl"
 
-layout(location = 0) out uvec4 fragData0;
-layout(location = 1) out vec4 fragData1;
-layout(location = 2) out vec4 fragData2;
-
 void main() {
     int shiftBufferIndex = int(v_textureShift.y * 65535.0) & 0xFFFF;
     TextureShiftBuffer textureShiftBuffer = s_TextureShiftBufferData[shiftBufferIndex];
@@ -98,10 +95,10 @@ void main() {
     vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
     getTexturePBRMaterials(s_MatTexture, pbrTextureId, adjustedUV, v_tangent, v_bitangent, normal, mers);
 
-    fragData0 = uvec4(pack2x8(mers.bg), pack2x8(v_lightmapUV), pack2x8(vec2(1.0, 0.0)), 0);
-    fragData1 = vec4(albedo.rgb, packMetalnessSubsurface(mers.r, mers.a));
-    fragData2.xy = ndirToOctSnorm(normal);
-    fragData2.zw = calculateMotionVector(v_worldPos, v_worldPos - u_prevWorldPosOffset.xyz);
+    gl_FragData[0] = uvec4(pack2x8(mers.bg), pack2x8(v_lightmapUV), pack2x8(vec2(1.0, 0.0)), 0u);
+    gl_FragData[1] = vec4(albedo.rgb, packMetalnessSubsurface(mers.r, mers.a));
+    gl_FragData[2].xy = ndirToOctSnorm(normal);
+    gl_FragData[2].zw = calculateMotionVector(v_worldPos, v_worldPos - u_prevWorldPosOffset.xyz);
 }
 #endif //DEPTH_ONLY_PASS
 

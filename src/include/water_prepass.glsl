@@ -17,8 +17,6 @@ void main() {
     worldPos -= up * (offsets.z - 0.5) + right * (offsets.x - 0.5);
 #endif
 
-    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
-
 #if !DEPTH_ONLY_PASS
     uint data16 = uint(round(a_texcoord1.y * 65535.0));
     v_lightmapUV = vec2(uvec2(data16 >> 4u, data16) & 15u) / 15.0;
@@ -27,8 +25,12 @@ void main() {
     v_bitangent = mul(u_model[0], vec4(cross(a_normal.xyz, a_tangent.xyz) * a_tangent.w, 0.0)).xyz;
     v_worldPos = worldPos;
 #endif
+
+    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
 }
-#endif
+
+#endif //BGFX_SHADER_TYPE_VERTEX
+
 
 #if BGFX_SHADER_TYPE_FRAGMENT
 #if DEPTH_ONLY_PASS
@@ -48,10 +50,6 @@ uniform highp vec4 Time;
 #include "./lib/materials.glsl"
 #include "./lib/water_wave.glsl"
 
-layout(location = 0) out uvec4 fragData0;
-layout(location = 1) out vec4 fragData1;
-layout(location = 2) out vec4 fragData2;
-
 void main() {
     vec3 normal = gl_FrontFacing ? -v_normal : v_normal;
     normal = normalize(normal);
@@ -62,10 +60,11 @@ void main() {
     waterNormal = mul(tbn, waterNormal);
     waterNormal = mix(normal, waterNormal, saturate(exp(-length(v_worldPos.xz) * 0.025)));
 
-    fragData0 = uvec4(pack2x8(vec2(0.05, 0.0)), pack2x8(v_lightmapUV), 0, 0);
-    fragData1 = vec4_splat(0.0);
-    fragData2.xy = ndirToOctSnorm(waterNormal);
-    fragData2.zw = calculateMotionVector(v_worldPos, v_worldPos - u_prevWorldPosOffset.xyz);
+    gl_FragData[0] = uvec4(pack2x8(vec2(0.05, 0.0)), pack2x8(v_lightmapUV), 0u, 0u);
+    gl_FragData[1] = vec4_splat(0.0);
+    gl_FragData[2].xy = ndirToOctSnorm(waterNormal);
+    gl_FragData[2].zw = calculateMotionVector(v_worldPos, v_worldPos - u_prevWorldPosOffset.xyz);
 }
-#endif //DEPTH_ONLY_PASS
+
+#endif //!DEPTH_AND_NORMAL_PASS
 #endif //BGFX_SHADER_TYPE_FRAGMENT

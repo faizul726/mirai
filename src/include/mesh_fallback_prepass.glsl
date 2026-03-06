@@ -11,14 +11,14 @@ void main(){
     vec3 worldPos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
 #endif
 
-    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
-
 #if !DEPTH_ONLY_PASS
     v_color0 = a_color0;
     v_texcoord0 = UVAnimation.xy + (a_texcoord0 * UVAnimation.zw);
     v_worldPos = worldPos;
     v_normal = mul(u_model[0], vec4(a_normal.xyz, 0.0)).xyz;
 #endif
+
+    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
 }
 #endif
 
@@ -39,10 +39,6 @@ SAMPLER2D_HIGHP_AUTOREG(s_MatTexture);
 
 #include "./lib/materials.glsl"
 
-layout(location = 0) out uvec4 fragData0;
-layout(location = 1) out vec4 fragData1;
-layout(location = 2) out vec4 fragData2;
-
 void main() {
 #if USE_TEXTURES__OFF
     vec4 albedo = vec4_splat(1.0);
@@ -56,10 +52,10 @@ void main() {
     albedo.rgb *= CurrentColor.rgb;
     albedo.rgb *= v_color0.rgb * 0.5;
 
-    fragData0 = uvec4(pack2x8(MERSUniforms.bg), pack2x8(TileLightIntensity.rg), pack2x8(vec2(1.0, 0.0)), 0);
-    fragData1 = vec4(albedo.rgb, packMetalnessSubsurface(MERSUniforms.r, MERSUniforms.a));
-    fragData2.xy = ndirToOctSnorm(normalize(v_normal));
-    fragData2.zw = calculateMotionVector(v_worldPos, v_worldPos - u_prevWorldPosOffset.xyz);
+    gl_FragData[0] = uvec4(pack2x8(MERSUniforms.bg), pack2x8(TileLightIntensity.rg), pack2x8(vec2(1.0, 0.0)), 0u);
+    gl_FragData[1] = vec4(albedo.rgb, packMetalnessSubsurface(MERSUniforms.r, MERSUniforms.a));
+    gl_FragData[2].xy = ndirToOctSnorm(normalize(v_normal));
+    gl_FragData[2].zw = calculateMotionVector(v_worldPos, v_worldPos - u_prevWorldPosOffset.xyz);
 }
 #endif //!DEPTH_ONLY_PASS
 #endif //BGFX_SHADER_TYPE_FRAGMENT

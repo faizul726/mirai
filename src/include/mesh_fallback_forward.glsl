@@ -15,9 +15,9 @@ void main() {
     vec3 worldPos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
 #endif
 
-    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
+    vec4 clipPos = mul(u_viewProj, vec4(worldPos, 1.0));
 
-    v_clipPos = mul(u_viewProj, vec4(worldPos, 1.0));
+    v_clipPos = clipPos;
     v_worldPos = worldPos;
     v_color0 = a_color0;
     v_texcoord0 = a_texcoord0;
@@ -36,6 +36,8 @@ void main() {
         v_absorbColor = vec3_splat(0.0);
         v_scatterColor = vec3_splat(1.0);
     }
+
+    gl_Position = clipPos;
 }
 #endif
 

@@ -13,6 +13,7 @@ void main() {
 #else
     vec3 worldPos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
 #endif
+
     v_texcoord0 = a_texcoord0;
 
 #if !DEPTH_ONLY_PASS && !DEPTH_ONLY_OPAQUE_PASS
@@ -50,6 +51,7 @@ void main() {
 }
 #endif
 
+
 #if BGFX_SHADER_TYPE_FRAGMENT
 SAMPLER2D_HIGHP_AUTOREG(s_MatTexture);
 SAMPLER2D_HIGHP_AUTOREG(s_LightMapTexture);
@@ -84,6 +86,7 @@ void main() {
 #elif DEPTH_ONLY_OPAQUE_PASS
     gl_FragData[0] = vec4_splat(0.0);
 #else
+
     vec4 albedo = texture2D(s_MatTexture, v_texcoord0);
 
     //normalize vertex color to get rid ambient occlusion
@@ -154,4 +157,5 @@ void main() {
     gl_FragData[0] = vec4(outColor, albedo.a);
 #endif
 }
-#endif
+
+#endif //BGFX_SHADER_TYPE_FRAGMENT

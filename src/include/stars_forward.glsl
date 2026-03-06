@@ -5,10 +5,11 @@ void main() {
 #else
     vec3 worldPos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
 #endif
-    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
+    vec4 clipPos = mul(u_viewProj, vec4(worldPos, 1.0));
     v_color0 = a_color0;
-    v_clipPos = gl_Position;
+    v_clipPos = clipPos;
     v_worldPos = worldPos;
+    gl_Position = clipPos;
 }
 #endif
 

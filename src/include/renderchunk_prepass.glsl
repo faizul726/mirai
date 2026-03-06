@@ -21,12 +21,6 @@ void main() {
     vec4 color = a_color0;
 #endif
 
-#if GEOMETRY_PREPASS_PASS || GEOMETRY_PREPASS_ALPHA_TEST_PASS
-    gl_Position = jitterVertexPosition(worldPos);
-#else
-    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
-#endif
-
     v_texcoord0 = a_texcoord0;
 
 #if !DEPTH_ONLY_PASS && !DEPTH_ONLY_OPAQUE_PASS
@@ -41,6 +35,12 @@ void main() {
 
     v_worldPos = worldPos;
     v_color0 = color;
+#endif
+
+#if GEOMETRY_PREPASS_PASS || GEOMETRY_PREPASS_ALPHA_TEST_PASS
+    gl_Position = jitterVertexPosition(worldPos);
+#else
+    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
 #endif
 }
 #endif
@@ -63,10 +63,6 @@ SAMPLER2D_HIGHP_AUTOREG(s_SeasonsTexture);
 
 #include "./lib/materials.glsl"
 
-layout(location = 0) out uvec4 fragData0;
-layout(location = 1) out vec4 fragData1;
-layout(location = 2) out vec4 fragData2;
-
 void main() {
     vec4 albedo = texture2D(s_MatTexture, v_texcoord0);
 #if GEOMETRY_PREPASS_ALPHA_TEST_PASS
@@ -87,7 +83,7 @@ void main() {
     //block that need vertex color tint
     if (any(notEqual(nColor.ggb, nColor.brr))) {
         albedo.rgb *= nColor;
-        vanillaAO /= nColorAvg;
+        vanillaAO /= nColorAvg; //normalize luminance
     }
 
     albedo.rgb *= nColorAvg;
@@ -98,10 +94,10 @@ void main() {
     vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
     getTexturePBRMaterials(s_MatTexture, v_pbrTextureId, v_texcoord0, v_tangent, v_bitangent, normal, mers);
 
-    fragData0 = uvec4(pack2x8(mers.bg), pack2x8(v_lightmapUV), pack2x8(vec2(vanillaAO, 0.0)), 0u);
-    fragData1 = vec4(albedo.rgb, packMetalnessSubsurface(mers.r, mers.a));
-    fragData2.xy = ndirToOctSnorm(normal);
-    fragData2.zw = calculateMotionVector(v_worldPos, v_worldPos - u_prevWorldPosOffset.xyz);
+    gl_FragData[0] = uvec4(pack2x8(mers.bg), pack2x8(v_lightmapUV), pack2x8(vec2(vanillaAO, 0.0)), 0u);
+    gl_FragData[1] = vec4(albedo.rgb, packMetalnessSubsurface(mers.r, mers.a));
+    gl_FragData[2].xy = ndirToOctSnorm(normal);
+    gl_FragData[2].zw = calculateMotionVector(v_worldPos, v_worldPos - u_prevWorldPosOffset.xyz);
 }
 
 #endif

@@ -1,11 +1,12 @@
 #if BGFX_SHADER_TYPE_VERTEX
 uniform vec4 ViewportScale;
 void main() {
-    gl_Position = vec4(a_position.xy * 2.0 - 1.0, 0.0, 1.0);
     v_texcoord0 = a_texcoord0 * ViewportScale.xy;
-    v_projPos = gl_Position.xy;
+    v_projPos = a_position.xy * 2.0 - 1.0;
+    gl_Position = vec4(a_position.xy * 2.0 - 1.0, 0.0, 1.0);
 }
 #endif
+
 
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 SSRRoughnessCutoffParams;
@@ -188,7 +189,7 @@ void main() {
     ) ? calcFadingValue(roughness, rayPercentage) : 0.0;
 
     gl_FragColor = vec4(foundCoord, 0.0, fadingValue);
-#endif
+#endif //SSR_RAY_MARCH_PASS
 
 #if SSR_FILL_GAPS_PASS
     gl_FragColor = texture2D(s_InputTexture, v_texcoord0);
@@ -202,4 +203,4 @@ void main() {
 #endif
 }
 
-#endif
+#endif //BGFX_SHADER_TYPE_FRAGMENT

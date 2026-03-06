@@ -3,14 +3,14 @@
     "platforms": ["ESSL_310"],
     "merge_source": ["./vanilla"],
     "include_patterns": [
-      "./materials/*Prepass",
+      "./materials/*Prepass*",
       "./materials/Bloom",
       "./materials/ColorPostProcessing",
       "./materials/DeferredMultipass",
       "./materials/DeferredShading",
       "./materials/DeferredShadingBase",
       "./materials/DeferredTiledMixedRes",
-      "./materials/*Cubemap*",
+      "./materials/LegacyCubemap",
       "./materials/LightClustering",
       "./materials/ScreenSpaceReflections",
       "./materials/WaterExtinction"

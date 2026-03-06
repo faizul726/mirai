@@ -48,7 +48,6 @@
 #define PREVENT_CAMERA_GROUND_CLIP // Force camera to stay above horizon. Useful for certain games.
 #define LIGHT_COLOR_IS_RADIANCE    // Comment out if light color is not in radiometric units.
 #define AERIAL_SCALE               1.0 // Higher value = more aerial perspective. A value of 1 is tuned to match reference implementation.
-//#define NIGHT_LIGHT                2e-3 // Optional, cheap (free) non-physical night lighting. Makes twilight a bit purple which can look nice.
 
 // Atmosphere parameters (physical)
 #define ATMOSPHERE_HEIGHT  100000.0
@@ -74,7 +73,7 @@
 #define M_DENSITY_CAM_MOD     10.0
 #define M_OZONE               1.5
 #define M_OZONE2              5.0
-#define M_MIE                 vec3(0.95, 0.85, 0.75)
+#define M_MIE                 2.0
 
 float sq(float x) { return x*x; }
 float pow4(float x) { return sq(x)*sq(x); }
@@ -174,15 +173,9 @@ vec3 GetAtmosphere(
         float phaseR = PhaseR(costh);
         float phaseM = PhaseM(costh, 0.75);
 
-#ifdef NIGHT_LIGHT
-        float nightLight = NIGHT_LIGHT;
-#else
-        float nightLight = 0.0;
-#endif
-
         // Combined scattering
-        vec3 rayleigh = (phaseR * occlusion + phaseR * M_FAKE_MS) * lightColor + nightLight * phaseR;
-        vec3 mie = ((phaseM * occlusion + phaseR * M_FAKE_MS) * lightColor + nightLight * phaseR) * M_MIE;
+        vec3 rayleigh = (phaseR * occlusion + phaseR * M_FAKE_MS) * lightColor + phaseR;
+        vec3 mie = ((phaseM * occlusion + phaseR * M_FAKE_MS) * lightColor + phaseR) * M_MIE;
         vec3 scattering = mie * M + rayleigh * R;
 
         // View extinction, matched to reference
@@ -192,10 +185,9 @@ vec3 GetAtmosphere(
 
         if (t1.y > 0.0 && t1.y < rayLength) {
             // Darken planet
-            vec3 planetColor = vec3(0.2, 0.3, 0.4);
             float planetOpticalDepth = t1.y - max(0.0, t1.x);
             float skyWeight = exp(-planetOpticalDepth * 1e-6);
-            scattering *= mix(planetColor, vec3(1.0, 1.0, 1.0), skyWeight);
+            scattering *= mix(vec3(0.2, 0.3, 0.4), vec3(1.0, 1.0, 1.0), skyWeight);
         }
 
         return scattering * M_EXPOSURE_MUL;

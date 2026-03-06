@@ -1,19 +1,22 @@
 #if BGFX_SHADER_TYPE_VERTEX
+
 #if FALLBACK_PASS
 void main() {
     gl_Position = vec4_splat(0.0);
 }
 #else
 void main() {
-    gl_Position = vec4(a_position.xy * 2.0 - 1.0, a_position.z, 1.0);
-
     v_texcoord0 = a_texcoord0;
-    v_projPos = gl_Position.xy;
+    v_projPos = a_position.xy * 2.0 - 1.0;
+    gl_Position = vec4(a_position.xy * 2.0 - 1.0, a_position.z, 1.0);
 }
-#endif
-#endif
+#endif //FALLBACK_PASS
+
+#endif //BGFX_SHADER_TYPE_VERTEX
+
 
 #if BGFX_SHADER_TYPE_FRAGMENT
+
 #if FALLBACK_PASS
 void main() {
     gl_FragColor = vec4_splat(0.0);
@@ -53,8 +56,7 @@ void main() {
     vec4 data0 = texture2D(s_ColorMetalnessSubsurface, v_texcoord0);
     uvec4 data16 = texelFetch(s_EmissiveAmbientLinearRoughness, ivec2(gl_FragCoord.xy), 0) & 0xFFFFu;
     float roughness = float(data16.r >> 8) / 255.0;
-    vec2 lightmap = vec2(float(data16.g >> 8), float(data16.g & 0xFFu)) / 255.0;
-    float exposure = texture2D(s_PreviousFrameAverageLuminance, vec2_splat(0.5)).r;
+    vec2 lightmap = vec2(data16.g >> 8, data16.g & 0xFFu) / 255.0;
     float metalness = unpackMetalness(data0.a);
     vec3 albedo = pow(data0.rgb, vec3_splat(2.2)) * 2.0;
     vec3 f0 = mix(vec3_splat(0.02), albedo, metalness);
@@ -67,7 +69,9 @@ void main() {
     bool isOverworld = int(DimensionID.r) == 0;
     bool isNeedSkyReflection = !(CameraIsUnderwater.r > 0.0) && isOverworld;
 
-    if (depth < 1.0) {
+    float exposure = texture2D(s_PreviousFrameAverageLuminance, vec2_splat(0.5)).r;
+
+    if (depth != 1.0) {
         outColor = indirectSpecular(f0, worldDir, normal, v_texcoord0, roughness, metalness, lightmap, exposure, isNeedSkyReflection);
 
         float wDistNorm = length(worldPos) / FogAndDistanceControl.z;
@@ -95,7 +99,8 @@ void main() {
     gl_FragData[1] = vec4_splat(0.0);
 #endif
 }
-#endif
+
+#endif //DO_INDIRECT_SPECULAR_SHADING_DUAL_TARGET_PASS || DO_INDIRECT_SPECULAR_SHADING_SINGLE_TARGET_PASS
 
 #if DO_INDIRECT_SPECULAR_UPSCALE_PASS
 SAMPLER2D_HIGHP_AUTOREG(s_SpecularLighting);
@@ -105,6 +110,7 @@ void main() {
     gl_FragColor = vec4_splat(0.0);
     if (texture2D(s_SceneDepth, v_texcoord0).r < 1.0) gl_FragColor.rgb = texture2D(s_SpecularLighting, v_texcoord0).rgb;
 }
-#endif
+
+#endif //DO_INDIRECT_SPECULAR_UPSCALE_PASS
 
 #endif //BGFX_SHADER_TYPE_FRAGMENT

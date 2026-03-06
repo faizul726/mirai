@@ -12,9 +12,10 @@ void main(){
 #else
     vec3 worldPos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
 #endif
-    gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
 
-    v_clipPos = gl_Position;
+    vec4 clipPos = mul(u_viewProj, vec4(worldPos, 1.0));
+
+    v_clipPos = clipPos;
     v_color0 = a_color0;
     v_worldPos = worldPos;
     v_texcoord0 = a_texcoord0;
@@ -34,8 +35,11 @@ void main(){
         v_absorbColor = vec3_splat(0.0);
         v_scatterColor = vec3_splat(1.0);
     }
+
+    gl_Position = clipPos;
 }
 #endif
+
 
 #if BGFX_SHADER_TYPE_FRAGMENT
 SAMPLER2D_HIGHP_AUTOREG(s_ParticleTexture);
@@ -67,21 +71,26 @@ SAMPLER2D_HIGHP_AUTOREG(s_PreviousFrameAverageLuminance);
 
 void main() {
     vec4 albedo = texture2D(s_ParticleTexture, v_texcoord0);
+
 #if ALPHA_TEST_PASS
     if (albedo.a < 0.5) discard;
     albedo.a = 1.0;
 #endif
+
     albedo *= v_color0;
+
 #if FORWARD_PBR_TRANSPARENT_PASS
     albedo.rgb = pow(albedo.rgb, vec3_splat(2.2));
 
     int pbrTextureFlags = int(PBRTextureFlags.r);
+
     vec4 mers = MERSUniforms;
     if ((pbrTextureFlags & kPBRTextureDataFlagHasMaterialTexture) == kPBRTextureDataFlagHasMaterialTexture) {
         vec4 mersTex = texture2D(s_MERSTexture, v_texcoord0);
         mers.rgb = mersTex.rgb;
         if ((pbrTextureFlags & kPBRTextureDataFlagHasSubsurfaceChannel) == kPBRTextureDataFlagHasSubsurfaceChannel) mers.a = mersTex.a;
     }
+
     vec3 normal = ((pbrTextureFlags & kPBRTextureDataFlagHasNormalTexture) == kPBRTextureDataFlagHasNormalTexture) ? mul(u_model[0], vec4(texture2D(s_NormalTexture, v_texcoord0).rgb * 2.0 - 1.0, 0.0)).xyz : vec3_splat(0.0);
     vec3 f0 = mix(vec3_splat(0.02), albedo.rgb, mers.r);
 
@@ -128,6 +137,7 @@ void main() {
     gl_FragColor = vec4(outColor, albedo.a);
 #else
     gl_FragColor = albedo;
-#endif
+#endif //FORWARD_PBR_TRANSPARENT_PASS
 }
-#endif
+
+#endif //BGFX_SHADER_TYPE_FRAGMENT

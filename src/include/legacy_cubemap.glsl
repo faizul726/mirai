@@ -7,6 +7,7 @@ void main() {
 }
 #endif
 
+
 #if BGFX_SHADER_TYPE_FRAGMENT
 #include "./lib/common.glsl"
 
@@ -31,4 +32,4 @@ void main() {
     gl_FragColor = albedo;
 #endif
 }
-#endif
+#endif //BGFX_SHADER_TYPE_FRAGMENT

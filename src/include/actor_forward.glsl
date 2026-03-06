@@ -27,8 +27,6 @@ void main() {
     vec3 worldPos = mul(model, vec4(a_position, 1.0)).xyz;
 #endif
 
-    gl_Position = jitterVertexPosition(worldPos);
-
     v_texcoord0 = applyUvAnimation(a_texcoord0, UVAnimation);
 
 #if !DEPTH_ONLY_PASS && !DEPTH_ONLY_OPAQUE_PASS
@@ -71,6 +69,8 @@ void main() {
         v_scatterColor = vec3_splat(1.0);
     }
 #endif
+
+    gl_Position = jitterVertexPosition(worldPos);
 }
 
 #endif //BGFX_SHADER_TYPE_VERTEX

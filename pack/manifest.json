@@ -30,7 +30,7 @@
   "settings": [
     {
       "type": "label",
-      "text": "§e§lRestart Minecraft after activating the pack or changing the settings!"
+      "text": "§eRestart Minecraft after activating the pack or changing the settings!"
     }
   ],
   "capabilities": ["pbr"]

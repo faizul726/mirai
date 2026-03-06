@@ -1,13 +1,13 @@
 #include "./lib/taau_util.glsl"
 
 #if BGFX_SHADER_TYPE_VERTEX
-uniform highp vec4 Dimensions;
-uniform highp vec4 ViewPosition;
-uniform highp vec4 UVOffsetAndScale;
-uniform highp vec4 Velocity;
-uniform highp vec4 PositionBaseOffset;
-uniform highp vec4 PositionForwardOffset;
-uniform highp vec4 PrevPositionForwardOffset;
+uniform vec4 Dimensions;
+uniform vec4 ViewPosition;
+uniform vec4 UVOffsetAndScale;
+uniform vec4 Velocity;
+uniform vec4 PositionBaseOffset;
+uniform vec4 PositionForwardOffset;
+uniform vec4 PrevPositionForwardOffset;
 
 vec3 calcWorldPos(vec3 position) {
     vec3 p = mod(position + PositionBaseOffset.xyz, 30.0);
@@ -25,9 +25,6 @@ void main() {
     vec2 projPosUpDir = (projPosTop.xy / projPosTop.w) - (projPosBottom.xy / projPosBottom.w);
     vec2 projPosRightDir = normalize(vec2(-projPosUpDir.y, projPosUpDir.x));
 
-    gl_Position = mix(projPosTop, projPosBottom, a_texcoord0.y);
-    gl_Position.xy += (0.5 - a_texcoord0.x) * projPosRightDir * Dimensions.x;
-
     v_texcoord0 = UVOffsetAndScale.xy + (a_texcoord0 * UVOffsetAndScale.zw);
 #if NO_VARIETY__OFF
     v_texcoord0.x += a_color0.x * 255.0 * UVOffsetAndScale.z;
@@ -36,8 +33,14 @@ void main() {
     v_occlusionHeight = (worldPos.y + (ViewPosition.y - 0.5)) / 255.0;
     v_worldPos = worldPos;
     v_prevWorldPos = worldPos + PrevPositionForwardOffset.xyz;
+
+    gl_Position = mix(projPosTop, projPosBottom, a_texcoord0.y);
+    gl_Position.xy += (0.5 - a_texcoord0.x) * projPosRightDir * Dimensions.x;
 }
-#endif
+
+#endif //BGFX_SHADER_TYPE_VERTEX
+
+
 
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 OcclusionHeightOffset;
@@ -103,4 +106,5 @@ void main() {
     gl_FragColor = vec4_splat(0.0);
 #endif
 }
-#endif
+
+#endif //BGFX_SHADER_TYPE_FRAGMENT

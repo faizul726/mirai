@@ -1,7 +1,7 @@
 #if BGFX_SHADER_TYPE_VERTEX
 void main() {
-    gl_Position = vec4(a_position.xy * 2.0 - 1.0, 0.0, 1.0);
     v_texcoord0 = a_texcoord0;
+    gl_Position = vec4(a_position.xy * 2.0 - 1.0, 0.0, 1.0);
 }
 #endif
 

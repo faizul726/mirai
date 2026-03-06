@@ -12,10 +12,8 @@ uniform vec4 DimensionID;
 #include "./lib/atmosphere.glsl"
 
 void main() {
-    gl_Position = vec4(a_position.xy * 2.0 - 1.0, a_position.z, 1.0);
-
     v_texcoord0 = a_texcoord0;
-    v_projPos = gl_Position.xy;
+    v_projPos = a_position.xy * 2.0 - 1.0;
 
     //add smooth transition between night and sunrise, sunset and night
     float sunFade = smoothstep(0.0, 0.2, SunDir.y);
@@ -31,6 +29,8 @@ void main() {
         v_absorbColor = vec3_splat(0.0);
         v_scatterColor = vec3_splat(1.0);
     }
+
+    gl_Position = vec4(a_position.xy * 2.0 - 1.0, a_position.z, 1.0);
 }
 #endif
 #endif
@@ -66,7 +66,7 @@ void main() {
     float depth = sampleDepth(s_SceneDepth, v_texcoord0);
     vec3 projPos = vec3(v_projPos, depth);
     vec3 worldPos = projToWorld(projPos);
-    vec3 worldDir = normalize(worldPos);
+    vec3 worldDir = normalize(-worldPos);
 
     if (worldDir.y < 0.1 && ClampViewVectors.x > 0.0) {
         worldDir.y = 0.1;
@@ -94,5 +94,7 @@ void main() {
 
     gl_FragColor = vec4(outColor, 1.0);
 }
+
 #endif
-#endif
+
+#endif //BGFX_SHADER_TYPE_FRAGMENT

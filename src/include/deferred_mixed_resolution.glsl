@@ -12,10 +12,8 @@ uniform vec4 DimensionID;
 #include "./lib/atmosphere.glsl"
 
 void main() {
-    gl_Position = vec4(a_position.xy * 2.0 - 1.0, a_position.z, 1.0);
-
     v_texcoord0 = a_texcoord0;
-    v_projPos = gl_Position.xy;
+    v_projPos = a_position.xy * 2.0 - 1.0;
 
     //add smooth transition between night and sunrise, sunset and night
     float sunFade = smoothstep(0.0, 0.2, SunDir.y);
@@ -31,9 +29,12 @@ void main() {
         v_absorbColor = vec3_splat(0.0);
         v_scatterColor = vec3_splat(1.0);
     }
+
+    gl_Position = vec4(a_position.xy * 2.0 - 1.0, a_position.z, 1.0);
 }
 #endif
 #endif
+
 
 #if BGFX_SHADER_TYPE_FRAGMENT
 #if FALLBACK_PASS
@@ -110,9 +111,11 @@ void main() {
     }
 
     vec3 bsdf = BSDF(normal, DirectionalLightSourceWorldSpaceDirection.xyz, -worldDir, f0, albedo, shadowMap, metalness, roughness, subsurface);
-    if (depth < 1.0) gl_FragData[0].rgb = v_absorbColor * bsdf;
+    if (depth != 1.0) gl_FragData[0].rgb = v_absorbColor * bsdf;
 }
-#endif
+
+#endif //DIRECTIONAL_LIGHTING_PASS
+
 
 #if DISCRETE_INDIRECT_COMBINED_LIGHTING_PASS
 uniform highp vec4 CameraLightIntensity;
@@ -146,7 +149,9 @@ void main() {
     gl_FragData[1] = vec4_splat(0.0);
     gl_FragData[2] = vec4_splat(0.0);
 }
-#endif
+
+#endif //DISCRETE_INDIRECT_COMBINED_LIGHTING_PASS
+
 
 #if SURFACE_RADIANCE_UPSCALE_PASS
 uniform highp vec4 CameraIsUnderwater;
@@ -189,7 +194,7 @@ void main() {
 
     vec3 outColor = vec3_splat(0.0);
 
-    bool isTerrain = depth < 1.0;
+    bool isTerrain = depth != 1.0;
 
     if (isTerrain) {
         vec3 albedo = pow(texture2D(s_ColorMetalnessSubsurface, v_texcoord0).rgb, vec3_splat(2.2)) * 2.0;
@@ -226,6 +231,6 @@ void main() {
 
     gl_FragColor = vec4(outColor, 1.0);
 }
-#endif
+#endif //SURFACE_RADIANCE_UPSCALE_PASS
 
 #endif //BGFX_SHADER_TYPE_FRAGMENT
