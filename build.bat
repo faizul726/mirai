@@ -22,9 +22,9 @@ set "RST=[0m" && REM Clears colours and formatting
 set "ERR=[41;97m" && REM Red background with white text
 
 REM Profiles
-set "BASE_PROFILE=lazurite base"
-set "NORMAL_PROFILE=windows"
-set "NOCLOUDS_PROFILE=windows_noclouds"
+set "BASE_PROFILE=windows"
+set "NORMAL_PROFILE=windows features vclouds"
+set "NOCLOUDS_PROFILE=windows features"
 
 REM Shaderc paths
 set "SHADERC_PATH=shaderc.exe"
@@ -124,7 +124,7 @@ cls
 
 REM Build all profiles for windows
 echo !WHT!Running build: %BASE_PROFILE%!RST!
-call python -m lazurite build ./src -o "%BASE_MATERIALS_PATH%" --skip-validation
+call python -m lazurite build ./src -p "%BASE_PROFILE%" -o "%BASE_MATERIALS_PATH%" --skip-validation
 if errorlevel 1 (
     echo !ERR!Failed to build profile: %BASE_PROFILE%!RST!
     pause

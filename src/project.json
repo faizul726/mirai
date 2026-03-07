@@ -1,6 +1,5 @@
 {
   "base_profile": {
-    "platforms": ["ESSL_310"],
     "merge_source": ["./vanilla"],
     "include_patterns": [
       "./materials/*Prepass*",
@@ -15,89 +14,30 @@
       "./materials/ScreenSpaceReflections",
       "./materials/WaterExtinction"
     ],
-    "include_search_paths": [
-      "./include/",
-      "./include/bgfx/"
-    ]
+    "include_search_paths": ["./include/", "./include/bgfx/"]
   },
   "profiles": {
-    "windows_base": {
-      "platforms": ["Direct3D_SM65"]
+    "features": {
+      "include_patterns": [
+        "./materials/*ForwardPBR*",
+        "./materials/DeferredIndirectSpecular",
+        "./materials/DeferredMixedResolution",
+        "./materials/DeferredWater",
+        "./materials/PopulateVolume",
+        "./materials/SkyProbeDeferredShading"
+      ]
+    },
+    "vclouds": {
+      "macros": ["VOLUMETRIC_CLOUDS_ENABLED"]
     },
     "windows": {
-      "macros": ["VOLUMETRIC_CLOUDS_ENABLED"],
-      "platforms": ["Direct3D_SM65"],
-      "include_patterns": [
-        "./materials/*ForwardPBR*",
-        "./materials/DeferredIndirectSpecular",
-        "./materials/DeferredMixedResolution",
-        "./materials/DeferredWater",
-        "./materials/PopulateVolume",
-        "./materials/SkyProbeDeferredShading"
-      ]
-    },
-    "windows_noclouds": {
-      "platforms": ["Direct3D_SM65"],
-      "include_patterns": [
-        "./materials/*ForwardPBR*",
-        "./materials/DeferredIndirectSpecular",
-        "./materials/DeferredMixedResolution",
-        "./materials/DeferredWater",
-        "./materials/PopulateVolume",
-        "./materials/SkyProbeDeferredShading"
-      ]
-    },
-    "android_base": {
-      "platforms": ["ESSL_310"]
+      "platforms": ["Direct3D_SM65"]
     },
     "android": {
-      "macros": ["VOLUMETRIC_CLOUDS_ENABLED"],
-      "platforms": ["ESSL_310"],
-      "include_patterns": [
-        "./materials/*ForwardPBR*",
-        "./materials/DeferredIndirectSpecular",
-        "./materials/DeferredMixedResolution",
-        "./materials/DeferredWater",
-        "./materials/PopulateVolume",
-        "./materials/SkyProbeDeferredShading"
-      ]
-    },
-    "android_noclouds": {
-      "platforms": ["ESSL_310"],
-      "include_patterns": [
-        "./materials/*ForwardPBR*",
-        "./materials/DeferredIndirectSpecular",
-        "./materials/DeferredMixedResolution",
-        "./materials/DeferredWater",
-        "./materials/PopulateVolume",
-        "./materials/SkyProbeDeferredShading"
-      ]
-    },
-    "ios_base": {
-      "platforms": ["Metal"]
+      "platforms": ["ESSL_310"]
     },
     "ios": {
-      "macros": ["VOLUMETRIC_CLOUDS_ENABLED"],
-      "platforms": ["Metal"],
-      "include_patterns": [
-        "./materials/*ForwardPBR*",
-        "./materials/DeferredIndirectSpecular",
-        "./materials/DeferredMixedResolution",
-        "./materials/DeferredWater",
-        "./materials/PopulateVolume",
-        "./materials/SkyProbeDeferredShading"
-      ]
-    },
-    "ios_noclouds": {
-      "platforms": ["Metal"],
-      "include_patterns": [
-        "./materials/*ForwardPBR*",
-        "./materials/DeferredIndirectSpecular",
-        "./materials/DeferredMixedResolution",
-        "./materials/DeferredWater",
-        "./materials/PopulateVolume",
-        "./materials/SkyProbeDeferredShading"
-      ]
+      "platforms": ["Metal"]
     }
   }
 }
