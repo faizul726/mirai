@@ -26,7 +26,6 @@ vec3 getProbeLighting(float a, vec3 rv) {
 
     vec3 preFilteredColorCurrent = textureCubeArrayLod(s_SpecularIBLRecords, vec4(rv, curr), iblMipLevel).rgb;
     vec3 preFilteredColorPrevious = textureCubeArrayLod(s_SpecularIBLRecords, vec4(rv, prev), iblMipLevel).rgb;
-
     vec3 preFilteredColor = mix(preFilteredColorPrevious, preFilteredColorCurrent, IBLParameters.w);
     return preFilteredColor;
 }
@@ -42,7 +41,7 @@ vec3 indirectSpecular(vec3 f0, vec3 worldDir, vec3 normal, vec2 ssrUV, float rou
     vec3 incomingLight = ambientColor;
 
     if (IBLParameters.r > 0.0) {
-        vec3 reflectedDir = reflect(-worldDir, normal);
+        vec3 reflectedDir = reflect(worldDir, normal);
         float reflIntensity = 1.0 - sqrt(roughness);
         vec3 skyProbe = getProbeLighting(roughness, reflectedDir);
 
@@ -74,7 +73,7 @@ vec3 indirectSpecular(vec3 f0, vec3 worldDir, vec3 normal, float roughness, floa
     vec3 incomingLight = ambientColor;
 
     if (IBLParameters.r > 0.0) {
-        vec3 reflectedDir = reflect(-worldDir, normal);
+        vec3 reflectedDir = reflect(worldDir, normal);
         float reflIntensity = 1.0 - sqrt(roughness);
         vec3 skyProbe = getProbeLighting(roughness, reflectedDir);
 

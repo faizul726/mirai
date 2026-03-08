@@ -1,8 +1,13 @@
+// shared includes (vertex and fragment shaders)
 #include "./lib/common.glsl"
 #include "./lib/actor_util.glsl"
 #include "./lib/taau_util.glsl"
 #include "./lib/atmosphere.glsl"
 
+
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 uniform vec4 UVAnimation;
 uniform mat4 Bones[8];
@@ -60,7 +65,6 @@ void main() {
 
     v_absorbColor = GetLightTransmittance(SunDir.xyz) * sunFade * PI * M_EXPOSURE_MUL * SUN_MAX_ILLUMINANCE;
     v_absorbColor += GetLightTransmittance(MoonDir.xyz) * moonFade * PI * M_EXPOSURE_MUL * MOON_MAX_ILLUMINANCE;
-
     v_scatterColor = GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
     v_scatterColor += GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
 
@@ -76,6 +80,11 @@ void main() {
 #endif //BGFX_SHADER_TYPE_VERTEX
 
 
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 ActorFPEpsilon;
 uniform highp vec4 ChangeColor;
@@ -155,6 +164,22 @@ void main() {
 #else
 
 
+    //PBR materials setup
+    vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
+
+#ifdef MATERIAL_ACTOR_BANNER_FORWARD_PBR
+    vec4 albedo = getBannerAlbedo(v_color0, s_MatTexture, v_texcoords.zw, v_texcoords.xy);
+    albedo.a *= HudOpacity.r;
+
+    vec3 normal = gl_FrontFacing ? -v_normal : v_normal;
+    normal = normalize(normal);
+    getTexturePBRMaterials(s_MatTexture, v_texcoords.zw, v_tangent, v_bitangent, normal, mers);
+#else
+    vec3 normal = normalize(v_normal);
+    getTexturePBRMaterials(v_texcoord0, v_tangent, v_bitangent, normal, mers);
+#endif
+
+
 #if defined(MATERIAL_ACTOR_MULTI_TEXTURE_FORWARD_PBR) || defined(MATERIAL_ACTOR_TINT_FORWARD_PBR)
     vec4 albedo = getActorAlbedoNoColorChange(MatColor, s_MatTexture, s_MatTexture1, v_texcoord0);
     albedo = applyChangeColor(albedo, ChangeColor, MultiplicativeTintColor.rgb, 0.0);
@@ -192,21 +217,6 @@ defined(MATERIAL_ACTOR_PATTERN_GLINT_FORWARD_PBR)
     albedo.rgb = mix(albedo.rgb, OverlayColor.rgb, OverlayColor.a);
 #endif
 
-
-    vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
-
-#ifdef MATERIAL_ACTOR_BANNER_FORWARD_PBR
-    vec4 albedo = getBannerAlbedo(v_color0, s_MatTexture, v_texcoords.zw, v_texcoords.xy);
-    albedo.a *= HudOpacity.r;
-
-    vec3 normal = gl_FrontFacing ? -v_normal : v_normal;
-    normal = normalize(normal);
-    getTexturePBRMaterials(s_MatTexture, v_texcoords.zw, v_tangent, v_bitangent, normal, mers);
-#else
-    vec3 normal = normalize(v_normal);
-    getTexturePBRMaterials(v_texcoord0, v_tangent, v_bitangent, normal, mers);
-#endif
-
 #ifdef MATERIAL_ACTOR_PATTERN_GLINT_FORWARD_PBR
     LOOP
     for (int i = 0; i < int(PatternCount.x); i++) {
@@ -221,48 +231,47 @@ defined(MATERIAL_ACTOR_PATTERN_GLINT_FORWARD_PBR)
 #endif
 
     albedo.rgb = pow(albedo.rgb, vec3_splat(2.2));
-
     vec3 f0 = mix(vec3_splat(0.02), albedo.rgb, mers.r);
 
-    //ambient light
+
+    //ambient lighting
     vec3 blockAmbient = BLOCK_LIGHT_COLOR * uv1x2lig(TileLightIntensity.r) * BLOCK_LIGHT_INTENSITY;
     vec3 skyAmbient = (v_scatterColor + v_absorbColor * 0.01) * mix(pow(TileLightIntensity.g, 3.0), pow(TileLightIntensity.g, 5.0), CameraLightIntensity.g) * SKY_AMBIENT_INTENSITY;
     vec3 outColor = albedo.rgb * (1.0 - mers.r) * max(blockAmbient + skyAmbient, vec3_splat(MIN_AMBIENT_LIGHT));
 
-
-    //direct light
+    //direct lighting
     vec3 shadowMap = calcShadowMap(v_worldPos, normal).rgr;
-
-    float wDistNorm = length(v_worldPos) / FogAndDistanceControl.z;
-    float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
 
 #ifdef VOLUMETRIC_CLOUDS_ENABLED
     vec3 position = v_worldPos - WorldOrigin.xyz;
     CloudSetup cloudSetup = calcCloudSetup(DirectionalLightSourceWorldSpaceDirection.y, position.y);
     float cloudShadow = calcCloudShadow(position, DirectionalLightSourceWorldSpaceDirection.xyz, 2.0, cloudSetup);
-
     shadowMap.rg = min(shadowMap.rg, vec2_splat(cloudShadow * CLOUD_SHADOW_CONTRIBUTION + (1.0 - CLOUD_SHADOW_CONTRIBUTION)));
     shadowMap.b = min(shadowMap.b, cloudShadow); //used for specular
 #endif
 
     vec3 worldDir = normalize(v_worldPos);
     vec3 bsdf = BSDF(normal, DirectionalLightSourceWorldSpaceDirection.xyz, -worldDir, f0, albedo.rgb, shadowMap, mers.r, mers.b, mers.a);
-
     outColor += bsdf * v_absorbColor;
+
+    //always lit
     outColor += albedo.rgb * mers.g * EMISSIVE_MATERIAL_INTENSITY;
 
+    float worldDist = length(v_worldPos);
 #ifdef VOLUMETRIC_CLOUDS_ENABLED
+    float wDistNorm = worldDist / FogAndDistanceControl.z;
+    float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
     applyCumulusClouds(outColor, v_scatterColor, v_absorbColor, worldDir, wDistNorm, dither, true);
 #endif
 
+    //water extinction
     bool isCameraInsideWater = CameraIsUnderwater.r > 0.0 && CausticsParameters.a > 0.0;
-    //underwater extinction
-    if (isCameraInsideWater) outColor *= exp(-WATER_EXTINCTION_COEFFICIENTS * length(v_worldPos));
+    if (isCameraInsideWater) outColor *= exp(-WATER_EXTINCTION_COEFFICIENTS * worldDist);
 
     vec3 projPos = v_clipPos.xyz / v_clipPos.w;
     applyVolumetricFog(outColor, projPos);
 
-
+    //reflections
     bool isNeedSkyReflection = !isCameraInsideWater && (int(DimensionID.r) != 0);
     outColor += indirectSpecular(f0, worldDir, normal, mers.b, mers.r, TileLightIntensity.rg, isNeedSkyReflection);
 

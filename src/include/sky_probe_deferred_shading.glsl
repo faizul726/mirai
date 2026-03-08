@@ -1,3 +1,6 @@
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 #if FALLBACK_PASS
 void main() {
@@ -21,7 +24,6 @@ void main() {
 
     v_absorbColor = GetLightTransmittance(SunDir.xyz) * sunFade * PI * M_EXPOSURE_MUL * SUN_MAX_ILLUMINANCE;
     v_absorbColor += GetLightTransmittance(MoonDir.xyz) * moonFade * PI * M_EXPOSURE_MUL * MOON_MAX_ILLUMINANCE;
-
     v_scatterColor = GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
     v_scatterColor += GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
 
@@ -35,6 +37,13 @@ void main() {
 #endif
 #endif
 
+
+
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 #if FALLBACK_PASS
 void main() {
@@ -66,22 +75,22 @@ void main() {
     float depth = sampleDepth(s_SceneDepth, v_texcoord0);
     vec3 projPos = vec3(v_projPos, depth);
     vec3 worldPos = projToWorld(projPos);
-    vec3 worldDir = normalize(-worldPos);
-
-    if (worldDir.y < 0.1 && ClampViewVectors.x > 0.0) {
-        worldDir.y = 0.1;
-        worldDir = normalize(worldDir);
-    }
+    vec3 worldDir = normalize(worldPos);
+#if !BGFX_SHADER_LANGUAGE_GLSL
+    worldDir.y *= -1.0;
+#endif
+    if (worldDir.y < 0.1 && ClampViewVectors.x > 0.0) worldDir = normalize(vec3(worldDir.x, 0.1, worldDir.z));
 
     vec3 outColor = GetAtmosphere(worldDir, 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
     outColor += GetAtmosphere(worldDir, 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
 
-    float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
-
     applyCirrusClouds(outColor, worldDir, DirectionalLightSourceWorldSpaceDirection.xyz, v_absorbColor, false);
+
 #ifdef VOLUMETRIC_CLOUDS_ENABLED
+    float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
     applyCumulusClouds(outColor, v_scatterColor, v_absorbColor, worldDir, 0.0, dither, false);
 #endif
+
     applyVolumetricFog(outColor, projPos);
 
     if (int(CurrentFace.x) == 3) {
@@ -94,7 +103,5 @@ void main() {
 
     gl_FragColor = vec4(outColor, 1.0);
 }
-
-#endif
-
+#endif //!FALLBACK_PASS
 #endif //BGFX_SHADER_TYPE_FRAGMENT

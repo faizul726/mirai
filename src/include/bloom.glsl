@@ -1,3 +1,8 @@
+// original vibrant visual's bloom, modified to remove black squares bug
+
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 uniform vec4 ViewportScale;
 void main() {
@@ -6,6 +11,11 @@ void main() {
 }
 #endif
 
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 ViewportScale;
 uniform highp vec4 BloomParams;
@@ -23,7 +33,6 @@ SAMPLER2D_HIGHP_AUTOREG(s_BlurPyramidTexture);
 #include "./lib/common.glsl"
 
 void main() {
-    // original vibrant visual bloom, modified to remove black square bug
     vec2 uv = (floor(ViewportScale.zw * ViewportScale.xy) - 0.5) / ViewportScale.zw;
 
 #if BLOOM_BLEND_PASS
@@ -109,4 +118,5 @@ void main() {
     gl_FragColor = outColor;
 #endif
 }
-#endif
+
+#endif // BGFX_SHADER_TYPE_FRAGMENT

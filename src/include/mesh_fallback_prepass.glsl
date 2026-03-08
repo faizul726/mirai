@@ -1,6 +1,10 @@
 #include "./lib/common.glsl"
 #include "./lib/taau_util.glsl"
 
+
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 uniform vec4 UVAnimation;
 
@@ -22,6 +26,13 @@ void main(){
 }
 #endif
 
+
+
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 #if DEPTH_ONLY_PASS
 void main() {
@@ -44,13 +55,9 @@ void main() {
     vec4 albedo = vec4_splat(1.0);
 #else
     vec4 albedo = texture2D(s_MatTexture, v_texcoord0);
-#endif
     if (albedo.a < 0.5) discard;
-    albedo *= CurrentColor;
-    albedo *= v_color0;
-
-    albedo.rgb *= CurrentColor.rgb;
-    albedo.rgb *= v_color0.rgb * 0.5;
+#endif
+    albedo.rgb *= CurrentColor.rgb * v_color0.rgb * 0.5; //decrease albedo brightness to match terrain
 
     gl_FragData[0] = uvec4(pack2x8(MERSUniforms.bg), pack2x8(TileLightIntensity.rg), pack2x8(vec2(1.0, 0.0)), 0u);
     gl_FragData[1] = vec4(albedo.rgb, packMetalnessSubsurface(MERSUniforms.r, MERSUniforms.a));

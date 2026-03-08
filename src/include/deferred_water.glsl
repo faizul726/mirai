@@ -1,6 +1,9 @@
 #include "./lib/common.glsl"
 #include "./lib/atmosphere.glsl"
 
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 #if FALLBACK_PASS
 void main() {
@@ -22,7 +25,6 @@ void main() {
 
     v_absorbColor = GetLightTransmittance(SunDir.xyz) * sunFade * PI * M_EXPOSURE_MUL * SUN_MAX_ILLUMINANCE;
     v_absorbColor += GetLightTransmittance(MoonDir.xyz) * moonFade * PI * M_EXPOSURE_MUL * MOON_MAX_ILLUMINANCE;
-
     v_scatterColor = GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
     v_scatterColor += GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
 
@@ -33,10 +35,16 @@ void main() {
 
     gl_Position = vec4(a_position.xy * 2.0 - 1.0, a_position.z, 1.0);
 }
-#endif
-#endif
+#endif //!FALLBACK_PASS
+#endif //BGFX_SHADER_TYPE_VERTEX
 
 
+
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 #if FALLBACK_PASS
 void main() {
@@ -56,7 +64,6 @@ uniform highp vec4 WorldOrigin;
 uniform highp vec4 Time;
 
 SAMPLER2D_HIGHP_AUTOREG(s_Normal);
-SAMPLER2D_HIGHP_AUTOREG(s_ColorMetalnessSubsurface);
 USAMPLER2D_AUTOREG(s_EmissiveAmbientLinearRoughness);
 SAMPLER2D_HIGHP_AUTOREG(s_SceneDepth);
 SAMPLER2D_HIGHP_AUTOREG(s_PreviousFrameAverageLuminance);
@@ -75,16 +82,12 @@ void main() {
     float depth = sampleDepth(s_SceneDepth, v_texcoord0);
     vec3 projPos = vec3(v_projPos, depth);
     vec3 worldPos = projToWorld(projPos);
-    vec3 position = worldPos - WorldOrigin.xyz;
     vec3 worldDir = normalize(worldPos);
+    vec3 position = worldPos - WorldOrigin.xyz;
 
     float wDistNorm = length(worldPos) / FogAndDistanceControl.z;
     float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
 
-    uvec4 data16 = texelFetch(s_EmissiveAmbientLinearRoughness, ivec2(gl_FragCoord.xy), 0) & 0xFFFFu;
-    float roughness = float(data16.r >> 8) / 255.0;
-    float metalness = unpackMetalness(texture2D(s_ColorMetalnessSubsurface, v_texcoord0).a);
-    vec3 f0 = mix(vec3_splat(0.02), vec3_splat(1.0), metalness);
     vec3 normal = octToNdirSnorm(texture2D(s_Normal, v_texcoord0).rg);
     float shadowMap = calcShadowMap(worldPos, normal).r;
 
@@ -94,7 +97,7 @@ void main() {
     shadowMap = min(shadowMap, cloudShadow);
 #endif
 
-    vec3 brdf = BRDFSpecular(normal, DirectionalLightSourceWorldSpaceDirection.xyz, -worldDir, f0, shadowMap, roughness);
+    vec3 brdf = BRDFSpecular(normal, DirectionalLightSourceWorldSpaceDirection.xyz, -worldDir, vec3_splat(0.04), shadowMap, 0.0);
     vec3 outColor = v_absorbColor * brdf;
 
     gl_FragColor.a = 0.2;
@@ -116,6 +119,5 @@ void main() {
     gl_FragColor.rgb = outColor;
 }
 
-#endif
-
+#endif //!FALLBACK_PASS
 #endif //BGFX_SHADER_TYPE_FRAGMENT

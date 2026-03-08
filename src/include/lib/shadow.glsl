@@ -140,7 +140,6 @@ vec2 calcMainShadow(vec3 worldPos, float nDotSd) {
 vec2 calcShadowMap(vec3 worldPos, vec3 normal) {
     float nDotSd = saturate(dot(DirectionalLightSourceShadowDirection.xyz, normal));
     vec3 biasedWPos = worldPos + (normal * ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.a) * (1.0 - nDotSd);
-
     vec2 shadowMap = calcMainShadow(biasedWPos, nDotSd);
     float fpShadow = calcFPShadow(biasedWPos, nDotSd);
     shadowMap.r = min(shadowMap.r, fpShadow);

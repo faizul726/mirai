@@ -1,3 +1,8 @@
+// this is default vibrant visual's SSR with some modifications
+
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 uniform vec4 ViewportScale;
 void main() {
@@ -8,6 +13,11 @@ void main() {
 #endif
 
 
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 SSRRoughnessCutoffParams;
 uniform highp vec4 SSRRayMarchingParams;
@@ -55,12 +65,12 @@ vec2 getPreviousUV(vec3 ndc) {
     return prevUV;
 }
 
-// SSR
-// this is default vibrant visual's SSR with some modifications
-
 bool isDepthInCameraBounds(float depth) {
-    if (CameraData.x < CameraData.y) return CameraData.x < depth && depth < CameraData.y; //reverse z case
-    return CameraData.x > depth && depth > CameraData.y;
+    if (CameraData.x < CameraData.y) {
+        return CameraData.x < depth && depth < CameraData.y; //reverse z case
+    } else {
+        return CameraData.x > depth && depth > CameraData.y;
+    }
 }
 
 float projToLinearDepth(float z){
@@ -73,11 +83,9 @@ float projToLinearDepth(float z){
 
 float calcFadingValue(float roughness, float rayPercentage) {
     float fadeValueRayPercentage = 1.0 - smoothstep(0.9, 1.0, rayPercentage);
-
     float roughnessFadeDuration = SSRRoughnessCutoffParams.x - SSRRoughnessCutoffParams.y;
     float roughnessLerpAlpha = (max(roughness, SSRRoughnessCutoffParams.y) - SSRRoughnessCutoffParams.y) / roughnessFadeDuration;
     float fadeValueRoughness = mix(1.0, 0.0, roughnessLerpAlpha);
-
     float fadeValue = min(fadeValueRayPercentage, fadeValueRoughness);
     return fadeValue;
 }
@@ -91,8 +99,8 @@ int calcStepsCount(vec3 rayStartSS, vec3 rayStepSS) {
         rayStepSS.y < 0.0 ? abs(stepsCountTopLeftNearCorner.y) : stepsCountBottomRightFarCorner.y,
         rayStepSS.z < 0.0 ? abs(stepsCountTopLeftNearCorner.z) : stepsCountBottomRightFarCorner.z
     );
-    float minStepsCount = min(min(lowestStepCounts3.x, lowestStepCounts3.y), lowestStepCounts3.z);
 
+    float minStepsCount = min(min(lowestStepCounts3.x, lowestStepCounts3.y), lowestStepCounts3.z);
     int stepsCount = int(min(minStepsCount, SSRRayMarchingParams.x));
     return stepsCount;
 }
@@ -159,7 +167,7 @@ void main() {
     vec3 viewNormal = mul(u_view, vec4(normal, 0.0)).xyz;
 
     vec3 reflectedView = reflect(normalize(viewPos), viewNormal);
-    vec3 rayStartView = viewPos + viewNormal * SSRRayMarchingParams.z;
+    vec3 rayStartView = viewPos + normal * SSRRayMarchingParams.z;
     vec3 rayEndView = rayStartView + reflectedView;
 
     if (!isDepthInCameraBounds(rayStartView.z) || !isDepthInCameraBounds(rayEndView.z)) {
@@ -183,10 +191,7 @@ void main() {
 
     float refinedIter = doBinarySearch(foundIter, rayStartSS, rayStepSS, s_GbufferDepth, foundCoord);
     float rayPercentage = refinedIter / float(stepsCount);
-    float fadingValue = (
-        foundCoord.x > 0.0 || foundCoord.x < 1.0 &&
-        foundCoord.y > 0.0 && foundCoord.y < 1.0
-    ) ? calcFadingValue(roughness, rayPercentage) : 0.0;
+    float fadingValue = (foundCoord.x > 0.0 && foundCoord.x < 1.0 && foundCoord.y > 0.0 && foundCoord.y < 1.0) ? calcFadingValue(roughness, rayPercentage) : 0.0;
 
     gl_FragColor = vec4(foundCoord, 0.0, fadingValue);
 #endif //SSR_RAY_MARCH_PASS

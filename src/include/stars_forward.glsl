@@ -1,3 +1,6 @@
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 void main() {
 #if INSTANCING__ON
@@ -13,6 +16,12 @@ void main() {
 }
 #endif
 
+
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 Time;
 uniform highp vec4 WorldOrigin;
@@ -28,19 +37,17 @@ SAMPLER2DARRAY_AUTOREG(s_ScatteringBuffer);
 #include "./lib/clouds.glsl"
 
 void main() {
-    vec3 projPos = v_clipPos.xyz / v_clipPos.w;
-    vec3 worldDir = normalize(v_worldPos);
-
     vec4 outColor = v_color0 * StarsColor;
 
-    float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
-
 #ifdef VOLUMETRIC_CLOUDS_ENABLED
+    vec3 worldDir = normalize(v_worldPos);
+    float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
     CloudSetup cloudSetup = calcCloudSetup(worldDir.y, -WorldOrigin.y);
     float cloudTransmittance = calcCloudTransmittanceOnly(worldDir, 0.0, dither, false, cloudSetup);
     outColor *= cloudTransmittance;
 #endif
 
+    vec3 projPos = v_clipPos.xyz / v_clipPos.w;
     vec3 uvw = ndcToVolume(projPos);
     vec4 volumetricFog = sampleVolume(s_ScatteringBuffer, uvw);
     if (VolumeScatteringEnabledAndPointLightVolumetricsEnabled.x > 0.0) outColor *= volumetricFog.a;

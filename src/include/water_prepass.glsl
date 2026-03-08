@@ -1,5 +1,8 @@
 #include "./lib/taau_util.glsl"
 
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 void main() {
 #if INSTANCING__ON
@@ -32,6 +35,11 @@ void main() {
 #endif //BGFX_SHADER_TYPE_VERTEX
 
 
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 #if DEPTH_ONLY_PASS
 void main() {
@@ -58,13 +66,12 @@ void main() {
     vec2 waterPos = v_worldPos.xz - WorldOrigin.xz;
     vec3 waterNormal = getWaterNormal(waterPos, Time.x);
     waterNormal = mul(tbn, waterNormal);
-    waterNormal = mix(normal, waterNormal, saturate(exp(-length(v_worldPos.xz) * 0.025)));
+    waterNormal = mix(normal, waterNormal, saturate(exp(-length(v_worldPos.xz) * 0.07)));
 
-    gl_FragData[0] = uvec4(pack2x8(vec2(0.05, 0.0)), pack2x8(v_lightmapUV), 0u, 0u);
+    gl_FragData[0] = uvec4(0u, pack2x8(v_lightmapUV), 0u, 0u);
     gl_FragData[1] = vec4_splat(0.0);
     gl_FragData[2].xy = ndirToOctSnorm(waterNormal);
     gl_FragData[2].zw = calculateMotionVector(v_worldPos, v_worldPos - u_prevWorldPosOffset.xyz);
 }
-
 #endif //!DEPTH_AND_NORMAL_PASS
 #endif //BGFX_SHADER_TYPE_FRAGMENT

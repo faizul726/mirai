@@ -6,6 +6,9 @@ void main() {
 }
 #endif
 
+
+
+
 #if BGFX_SHADER_TYPE_FRAGMENT
 SAMPLER2D_HIGHP_AUTOREG(s_SceneDepth);
 SAMPLER2D_HIGHP_AUTOREG(s_WaterDepth);

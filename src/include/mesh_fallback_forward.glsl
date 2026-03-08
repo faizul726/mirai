@@ -1,6 +1,10 @@
 #include "./lib/common.glsl"
 #include "./lib/atmosphere.glsl"
 
+
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 #include "./lib/taau_util.glsl"
 
@@ -14,7 +18,6 @@ void main() {
 #else
     vec3 worldPos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
 #endif
-
     vec4 clipPos = mul(u_viewProj, vec4(worldPos, 1.0));
 
     v_clipPos = clipPos;
@@ -28,7 +31,6 @@ void main() {
 
     v_absorbColor = GetLightTransmittance(SunDir.xyz) * sunFade * PI * M_EXPOSURE_MUL * SUN_MAX_ILLUMINANCE;
     v_absorbColor += GetLightTransmittance(MoonDir.xyz) * moonFade * PI * M_EXPOSURE_MUL * MOON_MAX_ILLUMINANCE;
-
     v_scatterColor = GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
     v_scatterColor += GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
 
@@ -39,9 +41,14 @@ void main() {
 
     gl_Position = clipPos;
 }
-#endif
+#endif //BGFX_SHADER_TYPE_VERTEX
 
 
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 CameraLightIntensity;
 uniform highp vec4 DirectionalLightSourceWorldSpaceDirection;
@@ -58,7 +65,6 @@ uniform highp vec4 WorldOrigin;
 uniform highp vec4 FogAndDistanceControl;
 
 SAMPLER2D_HIGHP_AUTOREG(s_PreviousFrameAverageLuminance);
-
 #if USE_TEXTURES__ON
 SAMPLER2D_HIGHP_AUTOREG(s_MatTexture);
 #endif
@@ -69,56 +75,54 @@ SAMPLER2D_HIGHP_AUTOREG(s_MatTexture);
 #include "./lib/volumetrics.glsl"
 
 void main() {
+    vec3 normal = vec3(0.0, 0.0, 1.0);
 #if USE_TEXTURES__OFF
     vec4 albedo = vec4_splat(1.0);
 #else
     vec4 albedo = texture2D(s_MatTexture, v_texcoord0);
     if (albedo.a < 0.5) discard;
 #endif
-    albedo *= CurrentColor;
-    albedo *= v_color0;
+    albedo *= CurrentColor * v_color0;
     albedo.rgb = pow(albedo.rgb, vec3_splat(2.2));
-
-    vec3 normal = vec3(0.0, 0.0, 1.0);
     vec3 f0 = mix(vec3_splat(0.02), albedo.rgb, MERSUniforms.r);
 
+    //ambient lighting
     vec3 blockAmbient = BLOCK_LIGHT_COLOR * uv1x2lig(TileLightIntensity.r) * BLOCK_LIGHT_INTENSITY;
     vec3 skyAmbient = mix(pow(TileLightIntensity.g, 3.0), pow(TileLightIntensity.g, 5.0), CameraLightIntensity.g) * (v_scatterColor + v_absorbColor * 0.01) * SKY_AMBIENT_INTENSITY;
     vec3 outColor = albedo.rgb * (1.0 - MERSUniforms.r) * max(blockAmbient + skyAmbient, vec3_splat(MIN_AMBIENT_LIGHT));
 
-    vec3 worldDir = normalize(v_worldPos);
-
-
+    //directional lighting
     vec3 shadowMap = calcShadowMap(v_worldPos, normal).rgr;
-
-    float wDistNorm = length(v_worldPos) / FogAndDistanceControl.z;
-    float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
 
 #ifdef VOLUMETRIC_CLOUDS_ENABLED
     vec3 position = v_worldPos - WorldOrigin.xyz;
     CloudSetup cloudSetup = calcCloudSetup(DirectionalLightSourceWorldSpaceDirection.y, position.y);
     float cloudShadow = calcCloudShadow(position, DirectionalLightSourceWorldSpaceDirection.xyz, 2.0, cloudSetup);
-
     shadowMap.rg = min(shadowMap.rg, vec2_splat(cloudShadow * CLOUD_SHADOW_CONTRIBUTION + (1.0 - CLOUD_SHADOW_CONTRIBUTION)));
     shadowMap.b = min(shadowMap.b, cloudShadow); //used for specular
 #endif
 
+    vec3 worldDir = normalize(v_worldPos);
     vec3 bsdf = BSDF(normal, DirectionalLightSourceWorldSpaceDirection.xyz, -worldDir, f0, albedo.rgb, shadowMap, MERSUniforms.r, MERSUniforms.b, MERSUniforms.a);
-
     outColor += bsdf * v_absorbColor;
+
+    //always lit
     outColor += albedo.rgb * MERSUniforms.g * EMISSIVE_MATERIAL_INTENSITY;
 
 #ifdef VOLUMETRIC_CLOUDS_ENABLED
+    float wDistNorm = length(v_worldPos) / FogAndDistanceControl.z;
+    float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
     applyCumulusClouds(outColor, v_scatterColor, v_absorbColor, worldDir, wDistNorm, dither, true);
 #endif
 
+    //water extinctiion
     bool isCameraInsideWater = CameraIsUnderwater.r > 0.0 && CausticsParameters.a > 0.0;
     if (isCameraInsideWater) outColor *= exp(-WATER_EXTINCTION_COEFFICIENTS * length(v_worldPos));
 
     vec3 projPos = v_clipPos.xyz / v_clipPos.w;
     applyVolumetricFog(outColor, projPos);
 
-
+    //reflections
     bool isNeedSkyReflection = !isCameraInsideWater && (int(DimensionID.r) != 0);
     outColor += indirectSpecular(f0, worldDir, normal, MERSUniforms.b, MERSUniforms.r, TileLightIntensity.rg, isNeedSkyReflection);
 

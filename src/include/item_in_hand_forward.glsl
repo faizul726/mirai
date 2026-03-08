@@ -3,6 +3,10 @@
 #include "./lib/taau_util.glsl"
 #include "./lib/atmosphere.glsl"
 
+
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 #ifdef MATERIAL_ITEM_IN_HAND_FORWARD_PBR_GLINT
 uniform vec4 UVAnimation;
@@ -37,30 +41,22 @@ void main() {
     v_prevWorldPos = mul(PrevWorld, vec4(a_position, 1.0)).xyz;
 
 #ifdef MATERIAL_ITEM_IN_HAND_FORWARD_PBR_GLINT
-    v_layerUV.xy = calculateLayerUV(a_texcoord0, UVAnimation.x, UVAnimation.z, UVScale.xy);
-    v_layerUV.zw = calculateLayerUV(a_texcoord0, UVAnimation.y, UVAnimation.w, UVScale.xy);
+    v_glintUV.xy = calculateLayerUV(a_texcoord0, UVAnimation.x, UVAnimation.z, UVScale.xy);
+    v_glintUV.zw = calculateLayerUV(a_texcoord0, UVAnimation.y, UVAnimation.w, UVScale.xy);
 #endif
-
-    //add smooth transition between night and sunrise, sunset and night
-    float sunFade = smoothstep(0.0, 0.2, SunDir.y);
-    float moonFade = smoothstep(0.0, 0.2, MoonDir.y);
-
-    v_absorbColor = GetLightTransmittance(SunDir.xyz) * sunFade * PI * M_EXPOSURE_MUL * SUN_MAX_ILLUMINANCE;
-    v_absorbColor += GetLightTransmittance(MoonDir.xyz) * moonFade * PI * M_EXPOSURE_MUL * MOON_MAX_ILLUMINANCE;
-
-    v_scatterColor = GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
-    v_scatterColor += GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
-
-    if (int(DimensionID.r) != 0) {
-        v_absorbColor = vec3_splat(0.0);
-        v_scatterColor = vec3_splat(1.0);
-    }
 #endif //!DEPTH_ONLY_PASS && !DEPTH_ONLY_OPAQUE_PASS
 
     gl_Position = jitterVertexPosition(worldPos);
 }
-#endif
+#endif //BGFX_SHADER_TYPE_VERTEX
 
+
+
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 #if !DEPTH_ONLY_PASS && !DEPTH_ONLY_OPAQUE_PASS
 uniform highp vec4 ChangeColor;
@@ -107,7 +103,30 @@ void main() {
     gl_FragData[1] = vec4_splat(0.0);
 #else
 
+    //lighting color setup
+    //add smooth transition between night and sunrise, sunset and night
+    float sunFade = smoothstep(0.0, 0.2, SunDir.y);
+    float moonFade = smoothstep(0.0, 0.2, MoonDir.y);
+
+    vec3 absorbColor = GetLightTransmittance(SunDir.xyz) * sunFade * PI * M_EXPOSURE_MUL * SUN_MAX_ILLUMINANCE;
+    absorbColor += GetLightTransmittance(MoonDir.xyz) * moonFade * PI * M_EXPOSURE_MUL * MOON_MAX_ILLUMINANCE;
+
+    vec3 scatterColor = GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, SunDir.xyz, vec3_splat(1.0)) * SUN_MAX_ILLUMINANCE;
+    scatterColor += GetAtmosphere(vec3(0.0, 1.0, 0.0), 1e10, MoonDir.xyz, vec3_splat(1.0)) * MOON_MAX_ILLUMINANCE;
+
+    //if not overworld
+    if (int(DimensionID.r) != 0) {
+        absorbColor = vec3_splat(0.0);
+        scatterColor = vec3_splat(1.0);
+    }
+
+    //PBR materials setup
 #ifdef MATERIAL_ITEM_IN_HAND_FORWARD_PBR_TEXTURED
+    vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
+    vec3 normal = gl_FrontFacing ? -v_normal : v_normal;
+    normal = normalize(normal);
+    getTexturePBRMaterials(s_MatTexture, v_pbrTextureId, v_texcoord0, v_tangent, v_bitangent, normal, mers);
+
     vec4 albedo = texture2D(s_MatTexture, v_texcoord0) * MatColor;
     albedo.rgb *= mix(vec3_splat(1.0), v_color0.rgb, ColorBased.x);
 #if MULTI_COLOR_TINT__OFF
@@ -119,6 +138,8 @@ void main() {
 #endif
 
 #else
+    vec4 mers = v_mers;
+    vec3 normal = normalize(v_normal);
     vec4 albedo = mix(vec4_splat(1.0), vec4(v_color0.rgb, 1.0), ColorBased.x);
 #if MULTI_COLOR_TINT__OFF
     albedo.rgb *= ChangeColor.rgb;
@@ -130,53 +151,41 @@ void main() {
 #endif
     albedo.rgb = mix(albedo.rgb, OverlayColor.rgb, OverlayColor.a);
 #ifdef MATERIAL_ITEM_IN_HAND_FORWARD_PBR_GLINT
-    albedo.rgb = applyGlint(albedo.rgb, v_layerUV, s_GlintTexture, GlintColor);
+    albedo.rgb = applyGlint(albedo.rgb, v_glintUV, s_GlintTexture, GlintColor);
 #endif
 
     albedo.rgb = pow(albedo.rgb, vec3_splat(2.2));
-
-#ifdef MATERIAL_ITEM_IN_HAND_FORWARD_PBR_TEXTURED
-    vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
-    vec3 normal = gl_FrontFacing ? -v_normal : v_normal;
-    normal = normalize(normal);
-    getTexturePBRMaterials(s_MatTexture, v_pbrTextureId, v_texcoord0, v_tangent, v_bitangent, normal, mers);
-#else
-    vec4 mers = v_mers;
-    vec3 normal = normalize(v_normal);
-#endif
     vec3 f0 = mix(vec3_splat(0.02), albedo.rgb, mers.r);
 
+    //ambient lighting
     vec3 blockAmbient = BLOCK_LIGHT_COLOR * uv1x2lig(TileLightIntensity.r) * BLOCK_LIGHT_INTENSITY;
-    vec3 skyAmbient = mix(pow(TileLightIntensity.g, 3.0), pow(TileLightIntensity.g, 5.0), CameraLightIntensity.g) * (v_scatterColor + v_absorbColor * 0.01) * SKY_AMBIENT_INTENSITY;
+    vec3 skyAmbient = mix(pow(TileLightIntensity.g, 3.0), pow(TileLightIntensity.g, 5.0), CameraLightIntensity.g) * (scatterColor + absorbColor * 0.01) * SKY_AMBIENT_INTENSITY;
     vec3 outColor = albedo.rgb * (1.0 - mers.r) * max(blockAmbient + skyAmbient, vec3_splat(MIN_AMBIENT_LIGHT));
 
-
-    vec3 worldDir = normalize(v_worldPos);
-
+    //direct lighting
     vec3 shadowMap = calcShadowMap(v_worldPos, normal).rgr;
-
-    float wDistNorm = length(v_worldPos) / FogAndDistanceControl.z;
-    float dither = texelFetch(s_CausticsTexture, ivec3(ivec2(gl_FragCoord.xy) % 256, 1), 0).r;
 
 #ifdef VOLUMETRIC_CLOUDS_ENABLED
     vec3 position = v_worldPos - WorldOrigin.xyz;
     CloudSetup cloudSetup = calcCloudSetup(DirectionalLightSourceWorldSpaceDirection.y, position.y);
     float cloudShadow = calcCloudShadow(position, DirectionalLightSourceWorldSpaceDirection.xyz, 2.0, cloudSetup);
-
     shadowMap.rg = min(shadowMap.rg, vec2_splat(cloudShadow * CLOUD_SHADOW_CONTRIBUTION + (1.0 - CLOUD_SHADOW_CONTRIBUTION)));
     shadowMap.b = min(shadowMap.b, cloudShadow); //used for specular
 #endif
 
+    vec3 worldDir = normalize(v_worldPos);
     vec3 bsdf = BSDF(normal, DirectionalLightSourceWorldSpaceDirection.xyz, -worldDir, f0, albedo.rgb, shadowMap, mers.r, mers.b, mers.a);
+    outColor += bsdf * absorbColor;
 
-    outColor += bsdf * v_absorbColor;
+    //always lit
     outColor += albedo.rgb * mers.g * EMISSIVE_MATERIAL_INTENSITY;
 
-
+    //water extinction
     bool isCameraUnderWater = CameraIsUnderwater.r > 0.0;
     if (isCameraUnderWater) outColor *= exp(-WATER_EXTINCTION_COEFFICIENTS * length(v_worldPos));
 
-    bool isNeedSkyReflection = !isCameraUnderWater && (int(DimensionID.r) != 0);
+    //reflections
+    bool isNeedSkyReflection = !isCameraUnderWater && int(DimensionID.r) != 0;
     outColor += indirectSpecular(f0, worldDir, normal, mers.b, mers.r, TileLightIntensity.rg, isNeedSkyReflection);
 
     outColor = preExposeLighting(outColor, texture2D(s_PreviousFrameAverageLuminance, vec2_splat(0.5)).r);

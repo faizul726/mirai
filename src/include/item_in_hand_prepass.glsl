@@ -2,12 +2,15 @@
 #include "./lib/actor_util.glsl"
 #include "./lib/taau_util.glsl"
 
+
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 #ifdef MATERIAL_ITEM_IN_HAND_PREPASS_GLINT
 uniform vec4 UVAnimation;
 uniform vec4 UVScale;
 #endif
-
 uniform mat4 PrevWorld;
 
 void main() {
@@ -26,13 +29,15 @@ void main() {
 #else
     v_mers = a_texcoord8;
 #endif
+
     v_color0 = a_color0;
     v_worldPos = worldPos;
     v_normal = mul(u_model[0], vec4(a_normal.xyz, 0.0)).xyz;
     v_prevWorldPos = mul(PrevWorld, vec4(a_position, 1.0)).xyz;
+
 #ifdef MATERIAL_ITEM_IN_HAND_PREPASS_GLINT
-    v_layerUV.xy = calculateLayerUV(a_texcoord0, UVAnimation.x, UVAnimation.z, UVScale.xy);
-    v_layerUV.zw = calculateLayerUV(a_texcoord0, UVAnimation.y, UVAnimation.w, UVScale.xy);
+    v_glintUV.xy = calculateLayerUV(a_texcoord0, UVAnimation.x, UVAnimation.z, UVScale.xy);
+    v_glintUV.zw = calculateLayerUV(a_texcoord0, UVAnimation.y, UVAnimation.w, UVScale.xy);
 #endif
 #endif //!DEPTH_ONLY_PASS && !DEPTH_ONLY_OPAQUE_PASS
 
@@ -41,6 +46,11 @@ void main() {
 #endif //BGFX_SHADER_TYPE_VERTEX
 
 
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 #if DEPTH_ONLY_PASS
 void main() {
@@ -72,6 +82,11 @@ SAMPLER2D_HIGHP_AUTOREG(s_GlintTexture);
 
 void main() {
 #ifdef MATERIAL_ITEM_IN_HAND_PREPASS_TEXTURED
+    vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
+    vec3 normal = gl_FrontFacing ? -v_normal : v_normal;
+    normal = normalize(normal);
+    getTexturePBRMaterials(s_MatTexture, v_pbrTextureId, v_texcoord0, v_tangent, v_bitangent, normal, mers);
+
     vec4 albedo = texture2D(s_MatTexture, v_texcoord0) * MatColor;
     albedo.rgb *= mix(vec3_splat(1.0), v_color0.rgb, ColorBased.x);
 #if MULTI_COLOR_TINT__OFF
@@ -83,6 +98,8 @@ void main() {
 #endif
 
 #else
+    vec4 mers = v_mers;
+    vec3 normal = normalize(v_normal);
     vec4 albedo = mix(vec4_splat(1.0), vec4(v_color0.rgb, 1.0), ColorBased.x);
 #if MULTI_COLOR_TINT__OFF
     albedo.rgb *= ChangeColor.rgb;
@@ -94,26 +111,16 @@ void main() {
 #endif
     albedo.rgb = mix(albedo.rgb, OverlayColor.rgb, OverlayColor.a);
 #ifdef MATERIAL_ITEM_IN_HAND_PREPASS_GLINT
-    albedo.rgb = applyGlint(albedo.rgb, v_layerUV, s_GlintTexture, GlintColor);
+    albedo.rgb = applyGlint(albedo.rgb, v_glintUV, s_GlintTexture, GlintColor);
 #endif
 
-#ifdef MATERIAL_ITEM_IN_HAND_PREPASS_TEXTURED
-    vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
-    vec3 normal = gl_FrontFacing ? -v_normal : v_normal;
-    normal = normalize(normal);
-    getTexturePBRMaterials(s_MatTexture, v_pbrTextureId, v_texcoord0, v_tangent, v_bitangent, normal, mers);
-#else
-    vec4 mers = v_mers;
-    vec3 normal = normalize(v_normal);
-#endif
-
-    albedo.rgb *= 0.5;
+    albedo.rgb *= 0.5; //decrease albedo brightness to match terrain
 
     gl_FragData[0] = uvec4(pack2x8(mers.bg), pack2x8(TileLightIntensity.rg), pack2x8(vec2(1.0, 0.0)), 0u);
     gl_FragData[1] = vec4(albedo.rgb, packMetalnessSubsurface(mers.r, mers.a));
     gl_FragData[2].xy = ndirToOctSnorm(normal);
     gl_FragData[2].zw = calculateMotionVector(v_worldPos, v_prevWorldPos - u_prevWorldPosOffset.xyz);
 }
-#endif
+#endif //!DEPTH_ONLY_OPAQUE_PASS
 
 #endif //BGFX_SHADER_TYPE_FRAGMENT

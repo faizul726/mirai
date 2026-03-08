@@ -1,3 +1,6 @@
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 void main() {
     v_texcoord0 = a_texcoord0;
@@ -5,6 +8,12 @@ void main() {
 }
 #endif
 
+
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 TonemapParams0;
 uniform highp vec4 ExposureCompensation;
@@ -18,18 +27,15 @@ SAMPLER2D_HIGHP_AUTOREG(s_RasterizedColor);
 
 #include "./lib/common.glsl"
 
-// Missing Deadlines (Benjamin Wrensch): https://iolite-engine.com/blog_posts/minimal_agx_implementation
-// Filament: https://github.com/google/filament/blob/main/filament/src/ToneMapper.cpp#L263
-// https://github.com/EaryChow/AgX_LUT_Gen/blob/main/AgXBaseRec2020.py
+// https://github.com/dmnsgn/glsl-tone-map/blob/main/agx.glsl
 vec3 agx(vec3 color) {
     // Input transform (inset)
     // https://github.com/blender/blender/blob/fc08f7491e7eba994d86b610e5ec757f9c62ac81/release/datafiles/colormanagement/config.ocio#L358
-    mat3 AgXInsetMatrix = mtxFromCols(
+    color = mul(mtxFromCols(
         vec3(0.856627153315983, 0.137318972929847, 0.11189821299995),
         vec3(0.0951212405381588, 0.761241990602591, 0.0767994186031903),
         vec3(0.042516061458583, 0.101439036467562, 0.811302368396859)
-    );
-    color = mul(AgXInsetMatrix, color);
+    ), color);
 
     color = max(color, 1e-10); // From Filament: avoid 0 or negative numbers for log2
 
@@ -45,44 +51,18 @@ vec3 agx(vec3 color) {
     // Mean error^2: 3.6705141e-06
     vec3 x2 = color * color;
     vec3 x4 = x2 * x2;
-    color = + 15.5     * x4 * x2
-    - 40.14    * x4 * color
-    + 31.96    * x4
-    - 6.868    * x2 * color
-    + 0.4298   * x2
-    + 0.1191   * color
-    - 0.00232;
+    color = + 15.5 * x4 * x2 - 40.14 * x4 * color + 31.96 * x4 - 6.868 * x2 * color + 0.4298 * x2 + 0.1191 * color - 0.00232;
 
     // Inverse input transform (outset)
     // https://github.com/EaryChow/AgX_LUT_Gen/blob/ab7415eca3cbeb14fd55deb1de6d7b2d699a1bb9/AgXBaseRec2020.py#L25
     // https://github.com/google/filament/blob/bac8e58ee7009db4d348875d274daf4dd78a3bd1/filament/src/ToneMapper.cpp#L273-L278
-    mat3 AgXOutsetMatrix = mtxFromCols(
+    color = mul(mtxFromCols(
         vec3(1.1271005818144368, -0.1413297634984383, -0.14132976349843826),
         vec3(-0.11060664309660323, 1.157823702216272, -0.11060664309660294),
         vec3(-0.016493938717834573, -0.016493938717834257, 1.2519364065950405)
-    );
-    color = mul(AgXOutsetMatrix, color);
+    ), color);
 
     return color;
-}
-
-vec3 PBRNeutralToneMapping( vec3 color ) {
-    const float startCompression = 0.8 - 0.04;
-    const float desaturation = 0.15;
-
-    float x = min(color.r, min(color.g, color.b));
-    float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
-    color -= offset;
-
-    float peak = max(color.r, max(color.g, color.b));
-    if (peak < startCompression) return color;
-
-    const float d = 1. - startCompression;
-    float newPeak = 1. - d * d / (peak + d - startCompression);
-    color *= newPeak / peak;
-
-    float g = 1. - 1. / (desaturation * (peak - newPeak) + 1.);
-    return mix(color, newPeak * vec3(1, 1, 1), g);
 }
 
 //https://www.shadertoy.com/view/wdtfRS
@@ -130,4 +110,4 @@ void main() {
 
     gl_FragColor = vec4(outColor, 1.0);
 }
-#endif
+#endif //BGFX_SHADER_TYPE_FRAGMENT

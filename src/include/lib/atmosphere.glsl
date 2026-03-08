@@ -63,8 +63,8 @@
 #define MIE_MAX_LUM        0.5
 
 // Magic numbers
-#define M_EXPOSURE_MUL        0.23 // Tuned to match physical reference.
-#define M_FAKE_MS             0.3 // Physical multiple scattering results in ~30% increase in energy.
+#define M_EXPOSURE_MUL        0.23
+#define M_FAKE_MS             0.3
 #define M_AERIAL              2.5
 #define M_TRANSMITTANCE       0.25
 #define M_LIGHT_TRANSMITTANCE 1e6
@@ -94,7 +94,7 @@ vec2 SphereIntersection(vec3 rayStart, vec3 rayDir, vec3 sphereCenter, float sph
 }
 
 vec3 GetLightTransmittance(vec3 lightDir, float multiplier, float ozoneMultiplier) {
-    float lightExtinctionAmount = exp(-(saturate(lightDir.y + 0.05) * 40.0)) + exp(-(saturate(lightDir.y + 0.5) * 5.0)) * 0.4 + sq(saturate(1.0-lightDir.y)) * 0.0;
+    float lightExtinctionAmount = exp(-(saturate(lightDir.y + 0.05) * 40.0)) + exp(-(saturate(lightDir.y + 0.5) * 5.0)) * 0.4 + sq(saturate(1.0-lightDir.y)) * 0.02 + 0.002;
     return exp(-(C_RAYLEIGH + C_MIE + C_OZONE * ozoneMultiplier) * lightExtinctionAmount * ATMOSPHERE_DENSITY * multiplier * M_LIGHT_TRANSMITTANCE);
 }
 
@@ -146,11 +146,11 @@ vec3 GetAtmosphere(
         opticalDepth = min(opticalDepth * aerial * M_AERIAL * AERIAL_SCALE, t2.y);
 
         // Altitude-based density modulators
-        float hbias = 1.0-1.0/(2.0+sq(t2.y)*M_DENSITY_HEIGHT_MOD);
-        hbias = pow(hbias, 1.0+normAltitude*M_DENSITY_CAM_MOD); // Really need a pow here, bleh
+        float hbias = 1.0 - 1.0 / (2.0 + sq(t2.y) * M_DENSITY_HEIGHT_MOD);
+        hbias = pow(hbias, 1.0 + normAltitude * M_DENSITY_CAM_MOD); // Really need a pow here, bleh
         float sqhbias = sq(hbias);
         float densityR = sqhbias * ATMOSPHERE_DENSITY;
-        float densityM = sq(sqhbias)*hbias * ATMOSPHERE_DENSITY;
+        float densityM = sq(sqhbias) * hbias * ATMOSPHERE_DENSITY;
 
         // Apply light transmittance (makes sky red as sun approaches horizon)
         float ly = lightDir.y;
@@ -171,7 +171,7 @@ vec3 GetAtmosphere(
 
         float costh = dot(rayDir, lightDir);
         float phaseR = PhaseR(costh);
-        float phaseM = PhaseM(costh, 0.75);
+        float phaseM = PhaseM(costh, 0.8);
 
         // Combined scattering
         vec3 rayleigh = (phaseR * occlusion + phaseR * M_FAKE_MS) * lightColor + phaseR;
@@ -183,8 +183,8 @@ vec3 GetAtmosphere(
         // Store planet intersection flag in transmittance.w, useful for occluding clouds, celestial bodies etc.
         transmittance.w = step(t1.x, 0.0);
 
+        // Darken planet
         if (t1.y > 0.0 && t1.y < rayLength) {
-            // Darken planet
             float planetOpticalDepth = t1.y - max(0.0, t1.x);
             float skyWeight = exp(-planetOpticalDepth * 1e-6);
             scattering *= mix(vec3(0.2, 0.3, 0.4), vec3(1.0, 1.0, 1.0), skyWeight);

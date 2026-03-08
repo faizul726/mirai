@@ -1,7 +1,13 @@
+// shared includes (vertex and fragment shaders)
 #include "./lib/common.glsl"
 #include "./lib/actor_util.glsl"
 #include "./lib/taau_util.glsl"
 
+
+
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
 uniform vec4 UVAnimation;
 uniform mat4 Bones[8];
@@ -59,6 +65,11 @@ void main() {
 #endif //BGFX_SHADER_TYPE_VERTEX
 
 
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 ActorFPEpsilon;
 uniform highp vec4 ChangeColor;
@@ -116,9 +127,25 @@ void main() {
 #else
 
 uniform highp vec4 TileLightIntensity;
+
 #include "./lib/materials.glsl"
 
 void main() {
+    vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
+
+#ifdef MATERIAL_ACTOR_BANNER_PREPASS
+    vec4 albedo = getBannerAlbedo(v_color0, s_MatTexture, v_texcoords.zw, v_texcoords.xy);
+    albedo.a *= HudOpacity.r;
+
+    vec3 normal = gl_FrontFacing ? -v_normal : v_normal;
+    normal = normalize(normal);
+    getTexturePBRMaterials(s_MatTexture, v_texcoords.zw, v_tangent, v_bitangent, normal, mers);
+#else
+    vec3 normal = normalize(v_normal);
+    getTexturePBRMaterials(v_texcoord0, v_tangent, v_bitangent, normal, mers);
+#endif
+
+
 #if defined(MATERIAL_ACTOR_MULTI_TEXTURE_PREPASS) || defined(MATERIAL_ACTOR_TINT_PREPASS)
     vec4 albedo = getActorAlbedoNoColorChange(MatColor, s_MatTexture, s_MatTexture1, v_texcoord0);
     albedo = applyChangeColor(albedo, ChangeColor, MultiplicativeTintColor.rgb, 0.0);
@@ -156,21 +183,6 @@ defined(MATERIAL_ACTOR_PATTERN_GLINT_PREPASS)
     albedo.rgb = mix(albedo.rgb, OverlayColor.rgb, OverlayColor.a);
 #endif
 
-
-    vec4 mers = vec4(0.0, 0.0, 1.0, 0.0);
-
-#ifdef MATERIAL_ACTOR_BANNER_PREPASS
-    vec4 albedo = getBannerAlbedo(v_color0, s_MatTexture, v_texcoords.zw, v_texcoords.xy);
-    albedo.a *= HudOpacity.r;
-
-    vec3 normal = gl_FrontFacing ? -v_normal : v_normal;
-    normal = normalize(normal);
-    getTexturePBRMaterials(s_MatTexture, v_texcoords.zw, v_tangent, v_bitangent, normal, mers);
-#else
-    vec3 normal = normalize(v_normal);
-    getTexturePBRMaterials(v_texcoord0, v_tangent, v_bitangent, normal, mers);
-#endif
-
 #ifdef MATERIAL_ACTOR_PATTERN_GLINT_PREPASS
     LOOP
     for (int i = 0; i < int(PatternCount.x); i++) {
@@ -184,7 +196,7 @@ defined(MATERIAL_ACTOR_PATTERN_GLINT_PREPASS)
     albedo.rgb = applyGlint(albedo.rgb, v_layerUV, s_MatTexture1, GlintColor);
 #endif
 
-    albedo.rgb *= 0.5;
+    albedo.rgb *= 0.5; //decrease albedo brightness to match terrain
 
     gl_FragData[0] = uvec4(pack2x8(mers.bg), pack2x8(TileLightIntensity.rg), pack2x8(vec2(1.0, 0.0)), 0u);
     gl_FragData[1] = vec4(albedo.rgb, packMetalnessSubsurface(mers.r, mers.a));

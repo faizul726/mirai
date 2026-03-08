@@ -1,7 +1,11 @@
 #include "./lib/taau_util.glsl"
 
+
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
-void main(){
+void main() {
 #if INSTANCING__ON
     vec3 worldPos = mul(mtxFromCols(i_data1, i_data2, i_data3, vec4(0.0, 0.0, 0.0, 1.0)), vec4(a_position, 1.0)).xyz;
 #else
@@ -26,6 +30,11 @@ void main(){
 #endif //BGFX_SHADER_TYPE_VERTEX
 
 
+
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_FRAGMENT
 uniform highp vec4 MERSUniforms;
 uniform highp vec4 PBRTextureFlags;
@@ -44,6 +53,7 @@ void main() {
     albedo.a = 1.0;
 #endif
     albedo *= v_color0;
+
 #if GEOMETRY_PREPASS_ALPHA_TEST_PASS
     int pbrTextureFlags = int(PBRTextureFlags.r);
 
@@ -61,7 +71,7 @@ void main() {
         normal = mul(tbn, normalt);
     }
 
-    albedo.rgb *= 0.5;
+    albedo.rgb *= 0.5; //decrease albedo brightness to match terrain
 
     gl_FragData[0] = uvec4(pack2x8(mers.bg), pack2x8(v_ambientLight), pack2x8(vec2(1.0, 0.0)), 0u);
     gl_FragData[1] = vec4(albedo.rgb, packMetalnessSubsurface(mers.r, mers.a));

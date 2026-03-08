@@ -1,5 +1,7 @@
+///////////////////////////////////////////////////////////
+// VERTEX SHADER
+///////////////////////////////////////////////////////////
 #if BGFX_SHADER_TYPE_VERTEX
-
 #if FALLBACK_PASS
 void main() {
     gl_Position = vec4_splat(0.0);
@@ -10,13 +12,16 @@ void main() {
     v_projPos = a_position.xy * 2.0 - 1.0;
     gl_Position = vec4(a_position.xy * 2.0 - 1.0, a_position.z, 1.0);
 }
-#endif //FALLBACK_PASS
-
+#endif //!FALLBACK_PASS
 #endif //BGFX_SHADER_TYPE_VERTEX
 
 
-#if BGFX_SHADER_TYPE_FRAGMENT
 
+
+///////////////////////////////////////////////////////////
+// FRAGMENT/PIXEL SHADER
+///////////////////////////////////////////////////////////
+#if BGFX_SHADER_TYPE_FRAGMENT
 #if FALLBACK_PASS
 void main() {
     gl_FragColor = vec4_splat(0.0);
@@ -51,27 +56,28 @@ vec3 projToWorld(vec3 projPos) {
 
 void main() {
     float depth = sampleDepth(s_SceneDepth, v_texcoord0);
-    vec3 outColor = vec3_splat(0.0);
-
-    vec4 data0 = texture2D(s_ColorMetalnessSubsurface, v_texcoord0);
-    uvec4 data16 = texelFetch(s_EmissiveAmbientLinearRoughness, ivec2(gl_FragCoord.xy), 0) & 0xFFFFu;
-    float roughness = float(data16.r >> 8) / 255.0;
-    vec2 lightmap = vec2(data16.g >> 8, data16.g & 0xFFu) / 255.0;
-    float metalness = unpackMetalness(data0.a);
-    vec3 albedo = pow(data0.rgb, vec3_splat(2.2)) * 2.0;
-    vec3 f0 = mix(vec3_splat(0.02), albedo, metalness);
-    vec3 normal = octToNdirSnorm(texture2D(s_Normal, v_texcoord0).rg);
-
     vec3 projPos = vec3(v_projPos, depth);
     vec3 worldPos = projToWorld(projPos);
     vec3 worldDir = normalize(worldPos);
+
+    //materials data from gbuffers
+    uvec4 data16 = texelFetch(s_EmissiveAmbientLinearRoughness, ivec2(gl_FragCoord.xy), 0) & 0xFFFFu;
+    float roughness = float(data16.r >> 8) / 255.0;
+    vec2 lightmap = vec2(data16.g >> 8, data16.g & 0xFFu) / 255.0;
+    vec4 data = texture2D(s_ColorMetalnessSubsurface, v_texcoord0);
+    float metalness = unpackMetalness(data.a);
+    vec3 albedo = pow(data.rgb, vec3_splat(2.2)) * 2.0;
+    vec3 f0 = mix(vec3_splat(0.02), albedo, metalness);
+    vec3 normal = octToNdirSnorm(texture2D(s_Normal, v_texcoord0).rg);
 
     bool isOverworld = int(DimensionID.r) == 0;
     bool isNeedSkyReflection = !(CameraIsUnderwater.r > 0.0) && isOverworld;
 
     float exposure = texture2D(s_PreviousFrameAverageLuminance, vec2_splat(0.5)).r;
 
-    if (depth != 1.0) {
+    vec3 outColor = vec3_splat(0.0);
+
+    if (depth < 1.0) {
         outColor = indirectSpecular(f0, worldDir, normal, v_texcoord0, roughness, metalness, lightmap, exposure, isNeedSkyReflection);
 
         float wDistNorm = length(worldPos) / FogAndDistanceControl.z;
@@ -110,7 +116,6 @@ void main() {
     gl_FragColor = vec4_splat(0.0);
     if (texture2D(s_SceneDepth, v_texcoord0).r < 1.0) gl_FragColor.rgb = texture2D(s_SpecularLighting, v_texcoord0).rgb;
 }
-
 #endif //DO_INDIRECT_SPECULAR_UPSCALE_PASS
 
 #endif //BGFX_SHADER_TYPE_FRAGMENT
