@@ -30,9 +30,12 @@ jobs:
         unzip shaderc.zip
         mv shadercRelease shaderc
         chmod +x shaderc
-        python -m lazurite build src -p android -o pack\renderer\materials
-        python -m lazurite build src -p android features -o pack\subpacks\novc\renderer\materials
-        python -m lazurite build src -p android features vclouds -o pack\subpacks\vc\renderer\materials
+        mkdir -p pack/renderer/materials
+        mkdir -p pack/subpacks/novc/renderer/materials
+        mkdir -p pack/subpacks/vc/renderer/materials
+        python -m lazurite build src -p android -o pack/renderer/materials
+        python -m lazurite build src -p android features -o pack/subpacks/novc/renderer/materials
+        python -m lazurite build src -p android features vclouds -o pack/subpacks/vc/renderer/materials
     - uses: actions/upload-artifact@v4
       with:
         name: mirai-android.mcpack
@@ -53,9 +56,12 @@ jobs:
         unzip shaderc.zip
         mv shadercRelease shaderc
         chmod +x shaderc
-        python -m lazurite build src -p ios -o pack\renderer\materials
-        python -m lazurite build src -p ios features -o pack\subpacks\novc\renderer\materials
-        python -m lazurite build src -p ios features vclouds -o pack\subpacks\vc\renderer\materials
+        mkdir -p pack/renderer/materials
+        mkdir -p pack/subpacks/novc/renderer/materials
+        mkdir -p pack/subpacks/vc/renderer/materials
+        python -m lazurite build src -p ios -o pack/renderer/materials
+        python -m lazurite build src -p ios features -o pack/subpacks/novc/renderer/materials
+        python -m lazurite build src -p ios features vclouds -o pack/subpacks/vc/renderer/materials
         
     - uses: actions/upload-artifact@v4
       with:
@@ -76,6 +82,9 @@ jobs:
         powershell -Command "Invoke-WebRequest -Uri 'https://github.com/bambosan/bgfx-mcbe/releases/download/binaries/shaderc-win-x64.zip' -OutFile 'shaderc.zip'"
         powershell -Command "Expand-Archive -Force 'shaderc.zip' ."
         rename shadercRelease.exe shaderc.exe
+        mkdir pack\renderer\materials
+        mkdir pack\subpacks\novc\renderer\materials
+        mkdir pack\subpacks\vc\renderer\materials
         python -m lazurite build src -p windows -o pack\renderer\materials
         python -m lazurite build src -p windows features -o pack\subpacks\novc\renderer\materials
         python -m lazurite build src -p windows features vclouds -o pack\subpacks\vc\renderer\materials
