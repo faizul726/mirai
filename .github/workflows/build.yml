@@ -79,8 +79,8 @@ jobs:
         cache: 'pip'
     - run: pip install lazurite==0.8.4
     - run: |
-        powershell -Command "Invoke-WebRequest -Uri 'https://github.com/bambosan/bgfx-mcbe/releases/download/binaries/shaderc-win-x64.zip' -OutFile 'shaderc.zip'"
-        powershell -Command "Expand-Archive -Force 'shaderc.zip' ."
+        Invoke-WebRequest -Uri 'https://github.com/bambosan/bgfx-mcbe/releases/download/binaries/shaderc-win-x64.zip' -OutFile 'shaderc.zip'
+        Expand-Archive -Force 'shaderc.zip' .
         Rename-Item -Path shadercRelease.exe -NewName shaderc.exe
         mkdir pack\renderer\materials
         mkdir pack\subpacks\novc\renderer\materials
