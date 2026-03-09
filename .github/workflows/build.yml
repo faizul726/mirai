@@ -1,0 +1,85 @@
+name: Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'platform'
+        required: true
+        default: 'All'
+        type: choice
+        options:
+        - Android
+        - Windows
+        - iOS
+        - All
+        
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    if:  ${{ (github.event.inputs.platform == 'Android') || (github.event.inputs.platform == 'All') }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' 
+        cache: 'pip'
+    - run: pip install lazurite==0.8.4
+    - run: |
+        curl -L "https://github.com/bambosan/bgfx-mcbe/releases/download/binaries/shaderc-linux-x64.zip" -o shaderc.zip
+        unzip shaderc.zip
+        mv shadercRelease shaderc
+        chmod +x shaderc
+        python -m lazurite build src -p android -o pack\renderer\materials
+        python -m lazurite build src -p android features -o pack\subpacks\novc\renderer\materials
+        python -m lazurite build src -p android features vclouds -o pack\subpacks\vc\renderer\materials
+    - uses: actions/upload-artifact@v4
+      with:
+        name: mirai-android.mcpack
+        path: ./pack/*
+        
+  ios:
+    runs-on: ubuntu-latest
+    if:  ${{ (github.event.inputs.platform == 'iOS') || (github.event.inputs.platform == 'All') }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' 
+        cache: 'pip'
+    - run: pip install lazurite==0.8.4
+    - run: |
+        curl -L "https://github.com/bambosan/bgfx-mcbe/releases/download/binaries/shaderc-linux-x64.zip" -o shaderc.zip
+        unzip shaderc.zip
+        mv shadercRelease shaderc
+        chmod +x shaderc
+        python -m lazurite build src -p ios -o pack\renderer\materials
+        python -m lazurite build src -p ios features -o pack\subpacks\novc\renderer\materials
+        python -m lazurite build src -p ios features vclouds -o pack\subpacks\vc\renderer\materials
+        
+    - uses: actions/upload-artifact@v4
+      with:
+        name: mirai-ios
+        path: ./pack/*
+        
+  windows:
+    runs-on: windows-2022
+    if:  ${{ (github.event.inputs.platform == 'Windows') || (github.event.inputs.platform == 'All') }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' 
+        cache: 'pip'
+    - run: pip install lazurite==0.8.4
+    - run: |
+        powershell -Command "Invoke-WebRequest -Uri 'https://github.com/bambosan/bgfx-mcbe/releases/download/binaries/shaderc-win-x64.zip' -OutFile 'shaderc.zip'"
+        powershell -Command "Expand-Archive -Force 'shaderc.zip' ."
+        rename shadercRelease.exe shaderc.exe
+        python -m lazurite build src -p windows -o pack\renderer\materials
+        python -m lazurite build src -p windows features -o pack\subpacks\novc\renderer\materials
+        python -m lazurite build src -p windows features vclouds -o pack\subpacks\vc\renderer\materials
+    - uses: actions/upload-artifact@v4
+      with:
+        name: mirai-windows.mcpack
+        path: ./pack/*
