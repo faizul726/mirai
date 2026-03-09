@@ -81,7 +81,7 @@ jobs:
     - run: |
         powershell -Command "Invoke-WebRequest -Uri 'https://github.com/bambosan/bgfx-mcbe/releases/download/binaries/shaderc-win-x64.zip' -OutFile 'shaderc.zip'"
         powershell -Command "Expand-Archive -Force 'shaderc.zip' ."
-        rename shadercRelease.exe shaderc.exe
+        Rename-Item -Path shadercRelease.exe -NewName shaderc.exe
         mkdir pack\renderer\materials
         mkdir pack\subpacks\novc\renderer\materials
         mkdir pack\subpacks\vc\renderer\materials
